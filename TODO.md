@@ -24,23 +24,23 @@
 
 ## 3. 設定模型與核心型別
 
-- [ ] 建立 `OracleConnectionSettings`。
-- [ ] 建立 `ExportJobSettings`。
-- [ ] 建立 `ExportResult`。
-- [ ] 建立 Oracle 欄位 schema 描述型別。
-- [ ] 建立 SQLite 欄位 schema 描述型別。
-- [ ] 定義匯出狀態與錯誤訊息格式。
+- [x] 建立 `OracleConnectionSettings`。
+- [x] 建立 `ExportJobSettings`。
+- [x] 建立 `ExportResult`。
+- [x] 建立 Oracle 欄位 schema 描述型別。
+- [x] 建立 SQLite 欄位 schema 描述型別。
+- [x] 定義匯出狀態與錯誤訊息格式。
 
 ## 4. Oracle 查詢服務
 
-- [ ] 建立 `IOracleQueryService` 介面。
-- [ ] 實作 Oracle 連線字串產生邏輯。
-- [ ] 實作 Oracle 連線測試。
-- [ ] 實作 SQL 查詢執行。
-- [ ] 實作查詢結果欄位 schema 讀取。
-- [ ] 支援 host/port/service name 連線模式。
-- [ ] 支援完整 connection string 進階模式。
-- [ ] 處理連線失敗、帳密錯誤、SQL 錯誤。
+- [x] 建立 `IOracleQueryService` 介面。
+- [x] 實作 Oracle 連線字串產生邏輯。
+- [x] 實作 Oracle 連線測試。
+- [x] 實作 SQL 查詢執行。
+- [x] 實作查詢結果欄位 schema 讀取。
+- [x] 支援 host/port/service name 連線模式。
+- [x] 支援完整 connection string 進階模式。
+- [x] 處理連線失敗、帳密錯誤、SQL 錯誤。
 
 ## 5. SQLite 匯出服務
 
