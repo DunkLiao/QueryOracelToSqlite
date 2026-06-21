@@ -68,14 +68,14 @@ git --version
 ### 核心套件
 
 ```powershell
-dotnet add package Oracle.ManagedDataAccess
+dotnet add package Oracle.ManagedDataAccess.Core
 dotnet add package Microsoft.Data.Sqlite
 dotnet add package CommunityToolkit.Mvvm
 ```
 
 用途：
 
-- `Oracle.ManagedDataAccess`: Oracle managed driver，不需安裝 Oracle Client。
+- `Oracle.ManagedDataAccess.Core`: Oracle managed driver，不需安裝 Oracle Client，支援 .NET 8 專案。
 - `Microsoft.Data.Sqlite`: SQLite ADO.NET provider。
 - `CommunityToolkit.Mvvm`: WPF MVVM binding、command、observable property 輔助。
 

@@ -1,0 +1,43 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{478BC165-97FE-41A6-B9D5-9F70AA96A5C4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OracleToSqlite.Core", "src\OracleToSqlite.Core\OracleToSqlite.Core.csproj", "{47F6CA1C-0C98-4F45-9C4F-B50570B22961}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OracleToSqlite.App", "src\OracleToSqlite.App\OracleToSqlite.App.csproj", "{BE306D19-CDD3-4BED-8869-200AF68F9C9B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{38B8101D-8865-47EC-B6C0-0B2990169733}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OracleToSqlite.Tests", "tests\OracleToSqlite.Tests\OracleToSqlite.Tests.csproj", "{E7DF7B92-90FA-47B2-9715-E4EF07A081F2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{47F6CA1C-0C98-4F45-9C4F-B50570B22961}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{47F6CA1C-0C98-4F45-9C4F-B50570B22961}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{47F6CA1C-0C98-4F45-9C4F-B50570B22961}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{47F6CA1C-0C98-4F45-9C4F-B50570B22961}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BE306D19-CDD3-4BED-8869-200AF68F9C9B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BE306D19-CDD3-4BED-8869-200AF68F9C9B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BE306D19-CDD3-4BED-8869-200AF68F9C9B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BE306D19-CDD3-4BED-8869-200AF68F9C9B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E7DF7B92-90FA-47B2-9715-E4EF07A081F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E7DF7B92-90FA-47B2-9715-E4EF07A081F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E7DF7B92-90FA-47B2-9715-E4EF07A081F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E7DF7B92-90FA-47B2-9715-E4EF07A081F2}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{47F6CA1C-0C98-4F45-9C4F-B50570B22961} = {478BC165-97FE-41A6-B9D5-9F70AA96A5C4}
+		{BE306D19-CDD3-4BED-8869-200AF68F9C9B} = {478BC165-97FE-41A6-B9D5-9F70AA96A5C4}
+		{E7DF7B92-90FA-47B2-9715-E4EF07A081F2} = {38B8101D-8865-47EC-B6C0-0B2990169733}
+	EndGlobalSection
+EndGlobal

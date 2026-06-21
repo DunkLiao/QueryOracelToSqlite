@@ -4,23 +4,23 @@
 
 ## 1. 開發環境
 
-- [ ] 安裝 .NET 8 SDK。
-- [ ] 安裝 Visual Studio 2022 Community。
-- [ ] 在 Visual Studio Installer 勾選 `.NET desktop development` workload。
-- [ ] 安裝 Git。
-- [ ] 確認 `dotnet --version` 可正常執行。
-- [ ] 確認 `git --version` 可正常執行。
+- [x] 安裝 .NET 8 SDK。
+- [x] 安裝 Visual Studio 2022 Community 或 Visual Studio Build Tools 2022。
+- [x] 在 Visual Studio Installer 勾選 `.NET desktop development` / WPF build tools workload。
+- [x] 安裝 Git。
+- [x] 確認 `dotnet --version` 可正常執行。
+- [x] 確認 `git --version` 可正常執行。
 
 ## 2. 專案骨架
 
-- [ ] 建立 .NET 8 WPF solution。
-- [ ] 建立主要 WPF application project。
-- [ ] 建立測試 project。
-- [ ] 加入 `Oracle.ManagedDataAccess` NuGet 套件。
-- [ ] 加入 `Microsoft.Data.Sqlite` NuGet 套件。
-- [ ] 加入 `CommunityToolkit.Mvvm` NuGet 套件。
-- [ ] 加入設定與 logging 相關 NuGet 套件。
-- [ ] 建立 MVVM 基礎結構。
+- [x] 建立 .NET 8 WPF solution。
+- [x] 建立主要 WPF application project。
+- [x] 建立測試 project。
+- [x] 加入 `Oracle.ManagedDataAccess.Core` NuGet 套件。
+- [x] 加入 `Microsoft.Data.Sqlite` NuGet 套件。
+- [x] 加入 `CommunityToolkit.Mvvm` NuGet 套件。
+- [x] 加入設定與 logging 相關 NuGet 套件。
+- [x] 建立 MVVM 基礎結構。
 
 ## 3. 設定模型與核心型別
 
