@@ -44,24 +44,24 @@
 
 ## 5. SQLite 匯出服務
 
-- [ ] 建立 `ISqliteExportService` 介面。
-- [ ] 實作 SQLite 檔案建立。
-- [ ] 實作 SQLite identifier quote。
-- [ ] 實作 Oracle 型別到 SQLite 型別轉換。
-- [ ] 實作 `CREATE TABLE` SQL 產生。
-- [ ] 實作目標 table 存在時覆蓋重建。
-- [ ] 實作 transaction 批次寫入。
-- [ ] 實作 null、文字、數字、日期、blob 寫入轉換。
+- [x] 建立 `ISqliteExportService` 介面。
+- [x] 實作 SQLite 檔案建立。
+- [x] 實作 SQLite identifier quote。
+- [x] 實作 Oracle 型別到 SQLite 型別轉換。
+- [x] 實作 `CREATE TABLE` SQL 產生。
+- [x] 實作目標 table 存在時覆蓋重建。
+- [x] 實作 transaction 批次寫入。
+- [x] 實作 null、文字、數字、日期、blob 寫入轉換。
 
 ## 6. 匯出流程協調
 
-- [ ] 建立 `IExportJobRunner` 介面。
-- [ ] 串接 Oracle 查詢與 SQLite 匯出流程。
-- [ ] 執行前檢查必要欄位。
-- [ ] 匯出過程回報進度與筆數。
-- [ ] 支援取消匯出。
-- [ ] 完成後回傳筆數、耗時、輸出檔案位置。
-- [ ] 失敗時回傳可讀錯誤訊息。
+- [x] 建立 `IExportJobRunner` 介面。
+- [x] 串接 Oracle 查詢與 SQLite 匯出流程。
+- [x] 執行前檢查必要欄位。
+- [x] 匯出過程回報進度與筆數。
+- [x] 支援取消匯出。
+- [x] 完成後回傳筆數、耗時、輸出檔案位置。
+- [x] 失敗時回傳可讀錯誤訊息。
 
 ## 7. WPF UI
 
