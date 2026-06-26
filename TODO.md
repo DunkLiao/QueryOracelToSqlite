@@ -98,17 +98,17 @@
 
 ## 9. 自動化測試
 
-- [ ] 測試 Oracle 型別到 SQLite 型別轉換。
-- [ ] 測試 SQLite table name quote。
-- [ ] 測試 SQLite column name quote。
-- [ ] 測試建表 SQL 產生。
-- [ ] 測試 null 值寫入。
-- [ ] 測試文字寫入。
-- [ ] 測試數字寫入。
-- [ ] 測試日期與 timestamp 寫入。
-- [ ] 測試 blob 寫入。
-- [ ] 使用模擬 schema/result reader 測試完整匯出流程。
-- [ ] 驗證產出的 SQLite 檔可重新開啟並查詢筆數。
+- [x] 測試 Oracle 型別到 SQLite 型別轉換。
+- [x] 測試 SQLite table name quote。
+- [x] 測試 SQLite column name quote。
+- [x] 測試建表 SQL 產生。
+- [x] 測試 null 值寫入。
+- [x] 測試文字寫入。
+- [x] 測試數字寫入。
+- [x] 測試日期與 timestamp 寫入。
+- [x] 測試 blob 寫入。
+- [x] 使用模擬 schema/result reader 測試完整匯出流程。
+- [x] 驗證產出的 SQLite 檔可重新開啟並查詢筆數。
 
 ## 10. 手動驗收
 

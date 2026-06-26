@@ -27,10 +27,11 @@ public class ExportJobRunnerTests
         var runner = new ExportJobRunner(
             new FakeOracleQueryService(oracleResult),
             new SqliteExportService());
+        var progress = new CollectingProgress<ExportProgress>(progressEvents);
 
         var result = await runner.RunAsync(
             settings,
-            new Progress<ExportProgress>(progressEvents.Add));
+            progress);
 
         result.Success.Should().BeTrue();
         result.Status.Should().Be(ExportStatus.Succeeded);
@@ -183,6 +184,14 @@ public class ExportJobRunnerTests
     private static OracleQueryResult CreateEmptyResult()
     {
         return new OracleQueryResult(Array.Empty<OracleColumnSchema>(), Array.Empty<IReadOnlyDictionary<string, object?>>());
+    }
+
+    private sealed class CollectingProgress<T>(ICollection<T> values) : IProgress<T>
+    {
+        public void Report(T value)
+        {
+            values.Add(value);
+        }
     }
 
     private sealed class FakeOracleQueryService(
