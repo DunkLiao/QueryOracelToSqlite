@@ -14,6 +14,7 @@ public sealed class SqliteExportService : ISqliteExportService
     {
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(result);
+        ValidateColumns(result.Columns);
 
         var directory = Path.GetDirectoryName(settings.SqliteFilePath);
         if (!string.IsNullOrWhiteSpace(directory))
@@ -79,6 +80,27 @@ public sealed class SqliteExportService : ISqliteExportService
             .Select(column => $"{QuoteIdentifier(column.ColumnName)} {MapToSqliteType(column)}");
 
         return $"CREATE TABLE {QuoteIdentifier(tableName)} ({string.Join(", ", columnDefinitions)})";
+    }
+
+    private static void ValidateColumns(IReadOnlyList<OracleColumnSchema> columns)
+    {
+        if (columns.Count == 0)
+        {
+            throw new ArgumentException("Query result must contain at least one column.", nameof(columns));
+        }
+
+        var duplicateNames = columns
+            .GroupBy(column => column.ColumnName, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.First().ColumnName)
+            .ToArray();
+
+        if (duplicateNames.Length > 0)
+        {
+            throw new ArgumentException(
+                $"Duplicate column names are not supported: {string.Join(", ", duplicateNames)}.",
+                nameof(columns));
+        }
     }
 
     private static string CreateInsertSql(string tableName, IReadOnlyList<OracleColumnSchema> columns)

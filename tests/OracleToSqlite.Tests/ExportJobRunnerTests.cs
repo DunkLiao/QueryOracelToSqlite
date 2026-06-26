@@ -65,6 +65,62 @@ public class ExportJobRunnerTests
     }
 
     [Fact]
+    public async Task RunAsync_ShouldReturnValidationError_WhenHostModeConnectionIsIncomplete()
+    {
+        var settings = new ExportJobSettings
+        {
+            Connection = new OracleConnectionSettings
+            {
+                Host = " ",
+                ServiceName = "ORCLPDB1",
+                Username = "user",
+                Password = "password"
+            },
+            SqlQuery = "select * from customers",
+            SqliteFilePath = CreateTempDatabasePath(),
+            TargetTableName = "Customers"
+        };
+        var runner = new ExportJobRunner(
+            new FakeOracleQueryService(CreateEmptyResult()),
+            new SqliteExportService());
+
+        var result = await runner.RunAsync(settings);
+
+        result.Status.Should().Be(ExportStatus.Failed);
+        result.Error.Should().NotBeNull();
+        result.Error!.Code.Should().Be(ExportErrorCodes.ValidationFailed);
+        result.Error.Message.Should().Contain("Host");
+    }
+
+    [Fact]
+    public async Task RunAsync_ShouldReturnValidationError_WhenFullConnectionStringModeIsIncomplete()
+    {
+        var settings = new ExportJobSettings
+        {
+            Connection = new OracleConnectionSettings
+            {
+                UseFullConnectionString = true,
+                FullConnectionString = " ",
+                Username = "user",
+                Password = "password"
+            },
+            SqlQuery = "select * from customers",
+            SqliteFilePath = CreateTempDatabasePath(),
+            TargetTableName = "Customers"
+        };
+        var runner = new ExportJobRunner(
+            new FakeOracleQueryService(CreateEmptyResult()),
+            new SqliteExportService());
+
+        var result = await runner.RunAsync(settings);
+
+        result.Status.Should().Be(ExportStatus.Failed);
+        result.Error.Should().NotBeNull();
+        result.Error!.Code.Should().Be(ExportErrorCodes.ValidationFailed);
+        result.Error.Message.Should().Contain("Full connection string");
+    }
+
+    [Fact]
     public async Task RunAsync_ShouldPreserveOracleError_WhenOracleQueryFails()
     {
         var settings = CreateSettings(CreateTempDatabasePath());

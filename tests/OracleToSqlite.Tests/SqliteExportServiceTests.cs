@@ -114,6 +114,76 @@ public class SqliteExportServiceTests
         count.Should().Be(1);
     }
 
+    [Fact]
+    public async Task ExportAsync_ShouldCreateTableAndReturnZero_WhenResultHasNoRows()
+    {
+        var databasePath = CreateTempDatabasePath();
+        var settings = CreateSettings(databasePath, "EmptyReport");
+        var result = new OracleQueryResult(
+            new[]
+            {
+                new OracleColumnSchema(0, "ID", "NUMBER", "Decimal", 10, 0, false)
+            },
+            Array.Empty<IReadOnlyDictionary<string, object?>>());
+        var service = new SqliteExportService();
+
+        var rowsWritten = await service.ExportAsync(settings, result);
+
+        rowsWritten.Should().Be(0);
+        await using var connection = new SqliteConnection($"Data Source={databasePath}");
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(*) FROM \"EmptyReport\"";
+        var count = (long)(await command.ExecuteScalarAsync())!;
+        count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ExportAsync_ShouldRejectDuplicateColumnNames()
+    {
+        var databasePath = CreateTempDatabasePath();
+        var settings = CreateSettings(databasePath, "DuplicateColumns");
+        var result = new OracleQueryResult(
+            new[]
+            {
+                new OracleColumnSchema(0, "ID", "NUMBER", "Decimal", 10, 0, false),
+                new OracleColumnSchema(1, "id", "NUMBER", "Decimal", 10, 0, false)
+            },
+            Array.Empty<IReadOnlyDictionary<string, object?>>());
+        var service = new SqliteExportService();
+
+        var action = async () => await service.ExportAsync(settings, result);
+
+        await action.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*Duplicate column names*ID*");
+    }
+
+    [Fact]
+    public async Task ExportAsync_ShouldMapUnknownOracleTypeToText()
+    {
+        var databasePath = CreateTempDatabasePath();
+        var settings = CreateSettings(databasePath, "UnknownTypes");
+        var result = new OracleQueryResult(
+            new[]
+            {
+                new OracleColumnSchema(0, "VALUE", "VECTOR", "Object", null, null, true)
+            },
+            new[]
+            {
+                new Dictionary<string, object?> { ["VALUE"] = "payload" }
+            });
+        var service = new SqliteExportService();
+
+        await service.ExportAsync(settings, result);
+
+        await using var connection = new SqliteConnection($"Data Source={databasePath}");
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'UnknownTypes'";
+        var createSql = (string?)await command.ExecuteScalarAsync();
+        createSql.Should().Contain("\"VALUE\" TEXT");
+    }
+
     private static ExportJobSettings CreateSettings(
         string databasePath,
         string tableName,

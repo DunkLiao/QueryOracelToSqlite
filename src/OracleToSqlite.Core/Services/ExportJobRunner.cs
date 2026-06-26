@@ -94,5 +94,45 @@ public sealed class ExportJobRunner(
         {
             throw new ArgumentException("Target table name is required.", nameof(settings.TargetTableName));
         }
+
+        ValidateConnection(settings.Connection);
+    }
+
+    private static void ValidateConnection(OracleConnectionSettings connection)
+    {
+        if (connection.UseFullConnectionString)
+        {
+            if (string.IsNullOrWhiteSpace(connection.FullConnectionString))
+            {
+                throw new ArgumentException("Full connection string is required.", nameof(connection.FullConnectionString));
+            }
+
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(connection.Host))
+        {
+            throw new ArgumentException("Host is required.", nameof(connection.Host));
+        }
+
+        if (connection.Port <= 0)
+        {
+            throw new ArgumentException("Port must be greater than zero.", nameof(connection.Port));
+        }
+
+        if (string.IsNullOrWhiteSpace(connection.ServiceName))
+        {
+            throw new ArgumentException("Service name is required.", nameof(connection.ServiceName));
+        }
+
+        if (string.IsNullOrWhiteSpace(connection.Username))
+        {
+            throw new ArgumentException("Username is required.", nameof(connection.Username));
+        }
+
+        if (string.IsNullOrWhiteSpace(connection.Password))
+        {
+            throw new ArgumentException("Password is required.", nameof(connection.Password));
+        }
     }
 }

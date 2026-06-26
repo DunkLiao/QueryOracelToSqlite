@@ -1,14 +1,196 @@
-﻿<Window x:Class="OracleToSqlite.App.MainWindow"
+<Window x:Class="OracleToSqlite.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:converters="clr-namespace:OracleToSqlite.App.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="{Binding Title}" Height="450" Width="800">
-    <Grid>
-        <TextBlock Text="{Binding Title}"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"
-                   FontSize="24" />
+        Title="{Binding Title}"
+        Height="760"
+        MinHeight="680"
+        Width="1040"
+        MinWidth="900"
+        WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <converters:InverseBooleanConverter x:Key="InverseBooleanConverter" />
+        <Style TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Margin" Value="0,4,0,10" />
+            <Setter Property="MinHeight" Value="30" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style TargetType="PasswordBox">
+            <Setter Property="Margin" Value="0,4,0,10" />
+            <Setter Property="MinHeight" Value="30" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="MinWidth" Value="96" />
+            <Setter Property="MinHeight" Value="34" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+        </Style>
+        <Style TargetType="GroupBox">
+            <Setter Property="Padding" Value="12" />
+            <Setter Property="Margin" Value="0,0,0,14" />
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <DockPanel Grid.Row="0" Margin="0,0,0,14">
+            <TextBlock Text="{Binding Title}"
+                       FontSize="24"
+                       FontWeight="SemiBold"
+                       DockPanel.Dock="Left" />
+            <TextBlock Text="{Binding StatusMessage}"
+                       HorizontalAlignment="Right"
+                       Foreground="#42526E"
+                       DockPanel.Dock="Right" />
+        </DockPanel>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="360" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <ScrollViewer Grid.Column="0"
+                          VerticalScrollBarVisibility="Auto"
+                          IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBooleanConverter}}">
+                <StackPanel>
+                    <GroupBox Header="Oracle connection">
+                        <StackPanel>
+                            <CheckBox Content="Use full connection string"
+                                      IsChecked="{Binding UseFullConnectionString}"
+                                      Margin="0,0,0,10" />
+
+                            <TextBlock Text="Host" />
+                            <TextBox Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}" />
+
+                            <TextBlock Text="Port" />
+                            <TextBox Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}" />
+
+                            <TextBlock Text="Service name" />
+                            <TextBox Text="{Binding ServiceName, UpdateSourceTrigger=PropertyChanged}" />
+
+                            <TextBlock Text="Full connection string" />
+                            <TextBox Text="{Binding FullConnectionString, UpdateSourceTrigger=PropertyChanged}"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     MinHeight="70"
+                                     VerticalContentAlignment="Top" />
+
+                            <TextBlock Text="Username" />
+                            <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" />
+
+                            <TextBlock Text="Password" />
+                            <PasswordBox x:Name="PasswordInput"
+                                         PasswordChanged="PasswordBox_OnPasswordChanged" />
+                        </StackPanel>
+                    </GroupBox>
+
+                    <GroupBox Header="SQLite output">
+                        <StackPanel>
+                            <TextBlock Text="Output file" />
+                            <DockPanel Margin="0,4,0,10">
+                                <Button Content="Browse"
+                                        Command="{Binding BrowseOutputPathCommand}"
+                                        DockPanel.Dock="Right"
+                                        Margin="8,0,0,0" />
+                                <TextBox Text="{Binding SqliteFilePath, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0"
+                                         MinHeight="34" />
+                            </DockPanel>
+
+                            <TextBlock Text="Target table name" />
+                            <TextBox Text="{Binding TargetTableName, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+                    </GroupBox>
+                </StackPanel>
+            </ScrollViewer>
+
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <GroupBox Grid.Row="0" Header="SQL query">
+                    <TextBox Text="{Binding SqlQuery, UpdateSourceTrigger=PropertyChanged}"
+                             IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBooleanConverter}}"
+                             AcceptsReturn="True"
+                             AcceptsTab="True"
+                             FontFamily="Consolas"
+                             FontSize="14"
+                             HorizontalScrollBarVisibility="Auto"
+                             VerticalScrollBarVisibility="Auto"
+                             TextWrapping="NoWrap"
+                             VerticalContentAlignment="Top" />
+                </GroupBox>
+
+                <GroupBox Grid.Row="1" Header="Run status">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
+                            <Button Content="Run"
+                                    Command="{Binding RunExportCommand}" />
+                            <Button Content="Cancel"
+                                    Command="{Binding CancelExportCommand}" />
+                            <Button Content="Clear"
+                                    Command="{Binding ClearCommand}" />
+                        </StackPanel>
+
+                        <ProgressBar Grid.Row="1"
+                                     Height="8"
+                                     IsIndeterminate="{Binding IsRunning}"
+                                     Margin="0,0,0,12" />
+
+                        <Grid Grid.Row="2" Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,24,0">
+                                <TextBlock Text="Rows imported: " FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding RowsWritten}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <TextBlock Text="Output: " FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding OutputPath}" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Grid>
+
+                        <Border Grid.Row="3"
+                                BorderBrush="#D0D7DE"
+                                BorderThickness="1"
+                                Padding="10"
+                                MinHeight="72">
+                            <TextBlock Text="{Binding ErrorMessage}"
+                                       Foreground="#B42318"
+                                       TextWrapping="Wrap" />
+                        </Border>
+                    </Grid>
+                </GroupBox>
+            </Grid>
+        </Grid>
+
+        <TextBlock Grid.Row="2"
+                   Text="第一版不儲存密碼；匯出時會覆蓋重建目標資料表。"
+                   Foreground="#667085"
+                   Margin="0,10,0,0" />
     </Grid>
 </Window>
