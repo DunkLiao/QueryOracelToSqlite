@@ -9,41 +9,6 @@ public static class OracleConnectionStringFactory
     {
         ArgumentNullException.ThrowIfNull(settings);
 
-        var builder = settings.UseFullConnectionString
-            ? CreateFromFullConnectionString(settings)
-            : CreateFromHostSettings(settings);
-
-        return builder.ConnectionString;
-    }
-
-    private static OracleConnectionStringBuilder CreateFromFullConnectionString(
-        OracleConnectionSettings settings)
-    {
-        if (string.IsNullOrWhiteSpace(settings.FullConnectionString))
-        {
-            throw new ArgumentException(
-                "Full connection string is required when full connection string mode is enabled.",
-                nameof(settings));
-        }
-
-        var builder = new OracleConnectionStringBuilder(settings.FullConnectionString);
-
-        if (!string.IsNullOrWhiteSpace(settings.Username))
-        {
-            builder.UserID = settings.Username;
-        }
-
-        if (!string.IsNullOrWhiteSpace(settings.Password))
-        {
-            builder.Password = settings.Password;
-        }
-
-        return builder;
-    }
-
-    private static OracleConnectionStringBuilder CreateFromHostSettings(
-        OracleConnectionSettings settings)
-    {
         Require(settings.Host, "Host", nameof(settings));
         Require(settings.ServiceName, "Service name", nameof(settings));
         Require(settings.Username, "Username", nameof(settings));
@@ -67,7 +32,7 @@ public static class OracleConnectionStringFactory
             UserID = settings.Username!.Trim(),
             Password = settings.Password,
             DataSource = dataSource
-        };
+        }.ConnectionString;
     }
 
     private static void Require(string? value, string fieldName, string parameterName)

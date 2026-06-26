@@ -8,6 +8,15 @@ namespace OracleToSqlite.Tests;
 public class OracleQueryServiceTests
 {
     [Fact]
+    public void OracleConnectionSettings_ShouldNotExposeFullConnectionStringProperties()
+    {
+        typeof(OracleConnectionSettings).GetProperty("UseFullConnectionString")
+            .Should().BeNull();
+        typeof(OracleConnectionSettings).GetProperty("FullConnectionString")
+            .Should().BeNull();
+    }
+
+    [Fact]
     public void Create_ShouldBuildHostPortServiceNameConnectionString_WhenHostModeIsUsed()
     {
         var settings = new OracleConnectionSettings
@@ -29,24 +38,6 @@ public class OracleQueryServiceTests
     }
 
     [Fact]
-    public void Create_ShouldPreserveFullConnectionStringAndOverrideCredentials_WhenFullConnectionStringModeIsUsed()
-    {
-        var settings = new OracleConnectionSettings
-        {
-            UseFullConnectionString = true,
-            FullConnectionString = "Data Source=SampleDb;User Id=old_user;Password=old_password;",
-            Username = "new_user",
-            Password = "new_password"
-        };
-
-        var connectionString = OracleConnectionStringFactory.Create(settings);
-
-        connectionString.Should().ContainEquivalentOf("Data Source=SampleDb");
-        connectionString.Should().ContainEquivalentOf("User Id=new_user");
-        connectionString.Should().ContainEquivalentOf("Password=new_password");
-    }
-
-    [Fact]
     public void Create_ShouldRejectMissingHostSettings_WhenHostModeRequiredFieldsAreEmpty()
     {
         var settings = new OracleConnectionSettings
@@ -61,21 +52,6 @@ public class OracleQueryServiceTests
 
         action.Should().Throw<ArgumentException>()
             .WithMessage("*Host*");
-    }
-
-    [Fact]
-    public void Create_ShouldRejectMissingFullConnectionString_WhenFullConnectionStringModeIsUsed()
-    {
-        var settings = new OracleConnectionSettings
-        {
-            UseFullConnectionString = true,
-            FullConnectionString = " "
-        };
-
-        var action = () => OracleConnectionStringFactory.Create(settings);
-
-        action.Should().Throw<ArgumentException>()
-            .WithMessage("*Full connection string*");
     }
 
     [Fact]

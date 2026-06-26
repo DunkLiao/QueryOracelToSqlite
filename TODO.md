@@ -39,7 +39,7 @@
 - [x] 實作 SQL 查詢執行。
 - [x] 實作查詢結果欄位 schema 讀取。
 - [x] 支援 host/port/service name 連線模式。
-- [x] 支援完整 connection string 進階模式。
+- [x] 移除完整 connection string 進階模式，統一使用標準連線欄位。
 - [x] 處理連線失敗、帳密錯誤、SQL 錯誤。
 
 ## 5. SQLite 匯出服務

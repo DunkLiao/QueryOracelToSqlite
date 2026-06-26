@@ -52,7 +52,6 @@ public class MainViewModelTests
         viewModel.Host.Should().BeEmpty();
         viewModel.Port.Should().Be("1521");
         viewModel.ServiceName.Should().BeEmpty();
-        viewModel.FullConnectionString.Should().BeEmpty();
         viewModel.Username.Should().BeEmpty();
         viewModel.Password.Should().BeEmpty();
         viewModel.SqlQuery.Should().BeEmpty();

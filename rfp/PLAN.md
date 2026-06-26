@@ -77,4 +77,4 @@
 - 第一版不做排程、不做多組任務、不做資料同步差異比對。
 - 第一版不儲存密碼；若之後需要記住連線設定，再加入 Windows DPAPI 加密保存。
 - 使用者輸入的 SQL 視為可信任內部使用，不額外做 SQL 安全限制。
-- Oracle 連線以 username/password + host/port/service name 為主要模式，另提供完整 connection string 作為進階模式。
+- Oracle 連線僅使用 username/password + host/port/service name 標準模式，不提供完整 connection string 輸入。

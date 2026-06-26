@@ -14,10 +14,6 @@ public partial class MainViewModel(
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RunExportCommand))]
-    private bool useFullConnectionString;
-
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(RunExportCommand))]
     private string host = string.Empty;
 
     [ObservableProperty]
@@ -27,10 +23,6 @@ public partial class MainViewModel(
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RunExportCommand))]
     private string serviceName = string.Empty;
-
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(RunExportCommand))]
-    private string fullConnectionString = string.Empty;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RunExportCommand))]
@@ -138,11 +130,9 @@ public partial class MainViewModel(
     [RelayCommand(CanExecute = nameof(CanEdit))]
     private void Clear()
     {
-        UseFullConnectionString = false;
         Host = string.Empty;
         Port = "1521";
         ServiceName = string.Empty;
-        FullConnectionString = string.Empty;
         Username = string.Empty;
         Password = string.Empty;
         SqlQuery = string.Empty;
@@ -166,39 +156,29 @@ public partial class MainViewModel(
 
     private string? ValidateForm()
     {
-        if (UseFullConnectionString)
+        if (string.IsNullOrWhiteSpace(Host))
         {
-            if (string.IsNullOrWhiteSpace(FullConnectionString))
-            {
-                return "Full connection string is required.";
-            }
+            return "Oracle host is required.";
         }
-        else
+
+        if (!int.TryParse(Port, out var parsedPort) || parsedPort <= 0)
         {
-            if (string.IsNullOrWhiteSpace(Host))
-            {
-                return "Oracle host is required.";
-            }
+            return "Oracle port must be a positive number.";
+        }
 
-            if (!int.TryParse(Port, out var parsedPort) || parsedPort <= 0)
-            {
-                return "Oracle port must be a positive number.";
-            }
+        if (string.IsNullOrWhiteSpace(ServiceName))
+        {
+            return "Oracle service name is required.";
+        }
 
-            if (string.IsNullOrWhiteSpace(ServiceName))
-            {
-                return "Oracle service name is required.";
-            }
+        if (string.IsNullOrWhiteSpace(Username))
+        {
+            return "Oracle username is required.";
+        }
 
-            if (string.IsNullOrWhiteSpace(Username))
-            {
-                return "Oracle username is required.";
-            }
-
-            if (string.IsNullOrWhiteSpace(Password))
-            {
-                return "Oracle password is required.";
-            }
+        if (string.IsNullOrWhiteSpace(Password))
+        {
+            return "Oracle password is required.";
         }
 
         if (string.IsNullOrWhiteSpace(SqlQuery))
@@ -225,8 +205,6 @@ public partial class MainViewModel(
         {
             Connection = new OracleConnectionSettings
             {
-                UseFullConnectionString = UseFullConnectionString,
-                FullConnectionString = NullIfWhiteSpace(FullConnectionString),
                 Host = NullIfWhiteSpace(Host),
                 Port = int.Parse(Port),
                 ServiceName = NullIfWhiteSpace(ServiceName),
@@ -241,6 +219,11 @@ public partial class MainViewModel(
 
     private void OnProgressChanged(ExportProgress progress)
     {
+        if (!IsRunning)
+        {
+            return;
+        }
+
         StatusMessage = progress.Message;
         RowsWritten = progress.RowsWritten;
     }

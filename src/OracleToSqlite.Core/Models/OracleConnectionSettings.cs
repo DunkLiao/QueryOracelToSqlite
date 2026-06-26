@@ -2,10 +2,6 @@ namespace OracleToSqlite.Core.Models;
 
 public sealed class OracleConnectionSettings
 {
-    public bool UseFullConnectionString { get; init; }
-
-    public string? FullConnectionString { get; init; }
-
     public string? Host { get; init; }
 
     public int Port { get; init; } = 1521;

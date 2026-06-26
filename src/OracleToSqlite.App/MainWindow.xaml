@@ -68,10 +68,6 @@
                 <StackPanel>
                     <GroupBox Header="Oracle connection">
                         <StackPanel>
-                            <CheckBox Content="Use full connection string"
-                                      IsChecked="{Binding UseFullConnectionString}"
-                                      Margin="0,0,0,10" />
-
                             <TextBlock Text="Host" />
                             <TextBox Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}" />
 
@@ -80,13 +76,6 @@
 
                             <TextBlock Text="Service name" />
                             <TextBox Text="{Binding ServiceName, UpdateSourceTrigger=PropertyChanged}" />
-
-                            <TextBlock Text="Full connection string" />
-                            <TextBox Text="{Binding FullConnectionString, UpdateSourceTrigger=PropertyChanged}"
-                                     AcceptsReturn="True"
-                                     TextWrapping="Wrap"
-                                     MinHeight="70"
-                                     VerticalContentAlignment="Top" />
 
                             <TextBlock Text="Username" />
                             <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" />

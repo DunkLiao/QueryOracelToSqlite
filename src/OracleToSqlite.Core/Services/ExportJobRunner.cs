@@ -100,16 +100,6 @@ public sealed class ExportJobRunner(
 
     private static void ValidateConnection(OracleConnectionSettings connection)
     {
-        if (connection.UseFullConnectionString)
-        {
-            if (string.IsNullOrWhiteSpace(connection.FullConnectionString))
-            {
-                throw new ArgumentException("Full connection string is required.", nameof(connection.FullConnectionString));
-            }
-
-            return;
-        }
-
         if (string.IsNullOrWhiteSpace(connection.Host))
         {
             throw new ArgumentException("Host is required.", nameof(connection.Host));
