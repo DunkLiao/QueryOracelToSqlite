@@ -8,28 +8,34 @@ namespace OracleToSqlite.App.ViewModels;
 
 public partial class MainViewModel(
     IExportJobRunner exportJobRunner,
+    IOracleQueryService oracleQueryService,
     IFileDialogService fileDialogService) : ObservableObject
 {
     public string Title { get; } = "Oracle To SQLite";
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RunExportCommand))]
+    [NotifyCanExecuteChangedFor(nameof(TestConnectionCommand))]
     private string host = string.Empty;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RunExportCommand))]
+    [NotifyCanExecuteChangedFor(nameof(TestConnectionCommand))]
     private string port = "1521";
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RunExportCommand))]
+    [NotifyCanExecuteChangedFor(nameof(TestConnectionCommand))]
     private string serviceName = string.Empty;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RunExportCommand))]
+    [NotifyCanExecuteChangedFor(nameof(TestConnectionCommand))]
     private string username = string.Empty;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RunExportCommand))]
+    [NotifyCanExecuteChangedFor(nameof(TestConnectionCommand))]
     private string password = string.Empty;
 
     [ObservableProperty]
@@ -49,6 +55,7 @@ public partial class MainViewModel(
     [NotifyCanExecuteChangedFor(nameof(CancelExportCommand))]
     [NotifyCanExecuteChangedFor(nameof(BrowseOutputPathCommand))]
     [NotifyCanExecuteChangedFor(nameof(ClearCommand))]
+    [NotifyCanExecuteChangedFor(nameof(TestConnectionCommand))]
     private bool isRunning;
 
     [ObservableProperty]
@@ -115,6 +122,49 @@ public partial class MainViewModel(
         return !IsRunning;
     }
 
+    [RelayCommand(CanExecute = nameof(CanEdit))]
+    private async Task TestConnectionAsync()
+    {
+        ResetRunState();
+
+        var validationError = ValidateConnectionFields();
+        if (validationError is not null)
+        {
+            StatusMessage = "Validation failed.";
+            ErrorMessage = validationError;
+            return;
+        }
+
+        IsRunning = true;
+        StatusMessage = "Testing Oracle connection.";
+        cancellationTokenSource = new CancellationTokenSource();
+
+        try
+        {
+            await oracleQueryService.TestConnectionAsync(
+                CreateConnectionSettings(),
+                cancellationTokenSource.Token);
+
+            StatusMessage = "Oracle connection succeeded.";
+            ErrorMessage = null;
+        }
+        catch (OracleQueryException exception)
+        {
+            StatusMessage = "Oracle connection failed.";
+            ErrorMessage = FormatError(exception.Error);
+        }
+        catch (OperationCanceledException)
+        {
+            StatusMessage = "Oracle connection test cancelled.";
+        }
+        finally
+        {
+            cancellationTokenSource.Dispose();
+            cancellationTokenSource = null;
+            IsRunning = false;
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanCancelExport))]
     private void CancelExport()
     {
@@ -156,6 +206,32 @@ public partial class MainViewModel(
 
     private string? ValidateForm()
     {
+        var connectionValidationError = ValidateConnectionFields();
+        if (connectionValidationError is not null)
+        {
+            return connectionValidationError;
+        }
+
+        if (string.IsNullOrWhiteSpace(SqlQuery))
+        {
+            return "SQL query is required.";
+        }
+
+        if (string.IsNullOrWhiteSpace(SqliteFilePath))
+        {
+            return "SQLite output path is required.";
+        }
+
+        if (string.IsNullOrWhiteSpace(TargetTableName))
+        {
+            return "Target table name is required.";
+        }
+
+        return null;
+    }
+
+    private string? ValidateConnectionFields()
+    {
         if (string.IsNullOrWhiteSpace(Host))
         {
             return "Oracle host is required.";
@@ -181,21 +257,6 @@ public partial class MainViewModel(
             return "Oracle password is required.";
         }
 
-        if (string.IsNullOrWhiteSpace(SqlQuery))
-        {
-            return "SQL query is required.";
-        }
-
-        if (string.IsNullOrWhiteSpace(SqliteFilePath))
-        {
-            return "SQLite output path is required.";
-        }
-
-        if (string.IsNullOrWhiteSpace(TargetTableName))
-        {
-            return "Target table name is required.";
-        }
-
         return null;
     }
 
@@ -203,17 +264,22 @@ public partial class MainViewModel(
     {
         return new ExportJobSettings
         {
-            Connection = new OracleConnectionSettings
-            {
-                Host = NullIfWhiteSpace(Host),
-                Port = int.Parse(Port),
-                ServiceName = NullIfWhiteSpace(ServiceName),
-                Username = NullIfWhiteSpace(Username),
-                Password = Password
-            },
+            Connection = CreateConnectionSettings(),
             SqlQuery = SqlQuery.Trim(),
             SqliteFilePath = SqliteFilePath.Trim(),
             TargetTableName = TargetTableName.Trim()
+        };
+    }
+
+    private OracleConnectionSettings CreateConnectionSettings()
+    {
+        return new OracleConnectionSettings
+        {
+            Host = NullIfWhiteSpace(Host),
+            Port = int.Parse(Port),
+            ServiceName = NullIfWhiteSpace(ServiceName),
+            Username = NullIfWhiteSpace(Username),
+            Password = Password
         };
     }
 

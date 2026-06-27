@@ -83,6 +83,11 @@
                             <TextBlock Text="Password" />
                             <PasswordBox x:Name="PasswordInput"
                                          PasswordChanged="PasswordBox_OnPasswordChanged" />
+
+                            <Button Content="Test connection"
+                                    Command="{Binding TestConnectionCommand}"
+                                    HorizontalAlignment="Left"
+                                    Margin="0,2,0,0" />
                         </StackPanel>
                     </GroupBox>
 

@@ -11,7 +11,10 @@ public class MainViewModelTests
     [Fact]
     public void Constructor_ShouldExposeDefaultFormState()
     {
-        var viewModel = new MainViewModel(new FakeExportJobRunner(), new FakeFileDialogService());
+        var viewModel = new MainViewModel(
+            new FakeExportJobRunner(),
+            new FakeOracleQueryService(),
+            new FakeFileDialogService());
 
         viewModel.Title.Should().Be("Oracle To SQLite");
         viewModel.Port.Should().Be("1521");
@@ -20,6 +23,7 @@ public class MainViewModelTests
         viewModel.RowsWritten.Should().Be(0);
         viewModel.ErrorMessage.Should().BeNull();
         viewModel.RunExportCommand.CanExecute(null).Should().BeTrue();
+        viewModel.TestConnectionCommand.CanExecute(null).Should().BeTrue();
         viewModel.CancelExportCommand.CanExecute(null).Should().BeFalse();
     }
 
@@ -27,7 +31,7 @@ public class MainViewModelTests
     public void BrowseOutputPathCommand_ShouldUseDialogResult()
     {
         var dialog = new FakeFileDialogService { Result = @"C:\exports\report.db" };
-        var viewModel = new MainViewModel(new FakeExportJobRunner(), dialog)
+        var viewModel = new MainViewModel(new FakeExportJobRunner(), new FakeOracleQueryService(), dialog)
         {
             SqliteFilePath = @"C:\exports\old.db"
         };
@@ -67,13 +71,94 @@ public class MainViewModelTests
     public async Task RunExportCommand_ShouldShowValidationError_WhenRequiredFieldsAreBlank()
     {
         var runner = new FakeExportJobRunner();
-        var viewModel = new MainViewModel(runner, new FakeFileDialogService());
+        var viewModel = new MainViewModel(runner, new FakeOracleQueryService(), new FakeFileDialogService());
 
         await viewModel.RunExportCommand.ExecuteAsync(null);
 
         runner.Settings.Should().BeNull();
         viewModel.ErrorMessage.Should().Contain("Oracle host is required.");
         viewModel.StatusMessage.Should().Be("Validation failed.");
+        viewModel.IsRunning.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task TestConnectionCommand_ShouldPassConnectionSettingsAndShowSuccess()
+    {
+        var oracle = new FakeOracleQueryService();
+        var viewModel = CreateValidViewModel(oracleQueryService: oracle);
+
+        await viewModel.TestConnectionCommand.ExecuteAsync(null);
+
+        oracle.TestedSettings.Should().NotBeNull();
+        oracle.TestedSettings!.Host.Should().Be("db.example.local");
+        oracle.TestedSettings.Port.Should().Be(1521);
+        oracle.TestedSettings.ServiceName.Should().Be("ORCLPDB1");
+        oracle.TestedSettings.Username.Should().Be("report_user");
+        oracle.TestedSettings.Password.Should().Be("secret");
+        viewModel.StatusMessage.Should().Be("Oracle connection succeeded.");
+        viewModel.ErrorMessage.Should().BeNull();
+        viewModel.IsRunning.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task TestConnectionCommand_ShouldOnlyRequireConnectionFields()
+    {
+        var oracle = new FakeOracleQueryService();
+        var viewModel = new MainViewModel(
+            new FakeExportJobRunner(),
+            oracle,
+            new FakeFileDialogService())
+        {
+            Host = "db.example.local",
+            Port = "1521",
+            ServiceName = "ORCLPDB1",
+            Username = "report_user",
+            Password = "secret"
+        };
+
+        await viewModel.TestConnectionCommand.ExecuteAsync(null);
+
+        oracle.TestedSettings.Should().NotBeNull();
+        viewModel.StatusMessage.Should().Be("Oracle connection succeeded.");
+        viewModel.ErrorMessage.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task TestConnectionCommand_ShouldShowValidationError_WhenConnectionFieldsAreBlank()
+    {
+        var oracle = new FakeOracleQueryService();
+        var viewModel = new MainViewModel(
+            new FakeExportJobRunner(),
+            oracle,
+            new FakeFileDialogService());
+
+        await viewModel.TestConnectionCommand.ExecuteAsync(null);
+
+        oracle.TestedSettings.Should().BeNull();
+        viewModel.StatusMessage.Should().Be("Validation failed.");
+        viewModel.ErrorMessage.Should().Contain("Oracle host is required.");
+        viewModel.IsRunning.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task TestConnectionCommand_ShouldShowOracleError_WhenConnectionFails()
+    {
+        var oracle = new FakeOracleQueryService
+        {
+            TestException = new OracleQueryException(
+                new ExportError(
+                    ExportErrorCodes.OracleConnectionFailed,
+                    "Oracle connection failed while testing Oracle connection.",
+                    "Unable to reach Oracle listener."),
+                new InvalidOperationException("Unable to reach Oracle listener."))
+        };
+        var viewModel = CreateValidViewModel(oracleQueryService: oracle);
+
+        await viewModel.TestConnectionCommand.ExecuteAsync(null);
+
+        viewModel.StatusMessage.Should().Be("Oracle connection failed.");
+        viewModel.ErrorMessage.Should().Contain("ORACLE_CONNECTION_FAILED");
+        viewModel.ErrorMessage.Should().Contain("Unable to reach Oracle listener.");
         viewModel.IsRunning.Should().BeFalse();
     }
 
@@ -150,9 +235,14 @@ public class MainViewModelTests
         viewModel.IsRunning.Should().BeFalse();
     }
 
-    private static MainViewModel CreateValidViewModel(FakeExportJobRunner? runner = null)
+    private static MainViewModel CreateValidViewModel(
+        FakeExportJobRunner? runner = null,
+        FakeOracleQueryService? oracleQueryService = null)
     {
-        return new MainViewModel(runner ?? new FakeExportJobRunner(), new FakeFileDialogService())
+        return new MainViewModel(
+            runner ?? new FakeExportJobRunner(),
+            oracleQueryService ?? new FakeOracleQueryService(),
+            new FakeFileDialogService())
         {
             Host = "db.example.local",
             Port = "1521",
@@ -218,6 +308,43 @@ public class MainViewModelTests
             }
 
             return Result;
+        }
+    }
+
+    private sealed class FakeOracleQueryService : IOracleQueryService
+    {
+        public OracleConnectionSettings? TestedSettings { get; private set; }
+
+        public Exception? TestException { get; init; }
+
+        public Task TestConnectionAsync(
+            OracleConnectionSettings settings,
+            CancellationToken cancellationToken = default)
+        {
+            TestedSettings = settings;
+
+            if (TestException is not null)
+            {
+                throw TestException;
+            }
+
+            return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyList<OracleColumnSchema>> GetSchemaAsync(
+            OracleConnectionSettings settings,
+            string sqlQuery,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<OracleQueryResult> ExecuteQueryAsync(
+            OracleConnectionSettings settings,
+            string sqlQuery,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
         }
     }
 }

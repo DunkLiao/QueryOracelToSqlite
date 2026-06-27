@@ -18,7 +18,10 @@ public class ProjectSkeletonTests
     [Fact]
     public void MainViewModel_ShouldExposeApplicationTitle()
     {
-        var viewModel = new MainViewModel(new FakeExportJobRunner(), new FakeFileDialogService());
+        var viewModel = new MainViewModel(
+            new FakeExportJobRunner(),
+            new FakeOracleQueryService(),
+            new FakeFileDialogService());
 
         viewModel.Title.Should().Be("Oracle To SQLite");
     }
@@ -39,6 +42,32 @@ public class ProjectSkeletonTests
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(ExportResult.Succeeded(0, TimeSpan.Zero, settings.SqliteFilePath));
+        }
+    }
+
+    private sealed class FakeOracleQueryService : IOracleQueryService
+    {
+        public Task TestConnectionAsync(
+            OracleConnectionSettings settings,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyList<OracleColumnSchema>> GetSchemaAsync(
+            OracleConnectionSettings settings,
+            string sqlQuery,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<OracleQueryResult> ExecuteQueryAsync(
+            OracleConnectionSettings settings,
+            string sqlQuery,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
         }
     }
 }
