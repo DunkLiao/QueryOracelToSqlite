@@ -28,4 +28,19 @@ public sealed class WindowsFileDialogService : IFileDialogService
 
         return dialog.ShowDialog() == true ? dialog.FileName : null;
     }
+
+    public string? ShowSelectFolderDialog(string? currentPath)
+    {
+        var dialog = new OpenFolderDialog
+        {
+            Title = "Select SQL folder"
+        };
+
+        if (!string.IsNullOrWhiteSpace(currentPath) && Directory.Exists(currentPath))
+        {
+            dialog.InitialDirectory = currentPath;
+        }
+
+        return dialog.ShowDialog() == true ? dialog.FolderName : null;
+    }
 }

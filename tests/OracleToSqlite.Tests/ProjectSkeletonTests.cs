@@ -19,7 +19,7 @@ public class ProjectSkeletonTests
     public void MainViewModel_ShouldExposeApplicationTitle()
     {
         var viewModel = new MainViewModel(
-            new FakeExportJobRunner(),
+            new FakeBatchExportJobRunner(),
             new FakeOracleQueryService(),
             new FakeFileDialogService());
 
@@ -32,16 +32,29 @@ public class ProjectSkeletonTests
         {
             return null;
         }
+
+        public string? ShowSelectFolderDialog(string? currentPath)
+        {
+            return null;
+        }
     }
 
-    private sealed class FakeExportJobRunner : IExportJobRunner
+    private sealed class FakeBatchExportJobRunner : IBatchExportJobRunner
     {
-        public Task<ExportResult> RunAsync(
-            ExportJobSettings settings,
+        public Task<BatchExportResult> RunAsync(
+            BatchExportJobSettings settings,
             IProgress<ExportProgress>? progress = null,
             CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(ExportResult.Succeeded(0, TimeSpan.Zero, settings.SqliteFilePath));
+            return Task.FromResult(new BatchExportResult(
+                ExportStatus.Succeeded,
+                0,
+                0,
+                0,
+                0,
+                TimeSpan.Zero,
+                settings.SqliteFilePath,
+                Array.Empty<BatchExportItemResult>()));
         }
     }
 

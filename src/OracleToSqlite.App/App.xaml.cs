@@ -16,6 +16,7 @@ public partial class App : Application
         services.AddSingleton<IOracleQueryService, OracleQueryService>();
         services.AddSingleton<ISqliteExportService, SqliteExportService>();
         services.AddSingleton<IExportJobRunner, ExportJobRunner>();
+        services.AddSingleton<IBatchExportJobRunner, BatchExportJobRunner>();
         services.AddSingleton<IFileDialogService, WindowsFileDialogService>();
         services.AddTransient<MainViewModel>();
         services.AddTransient<MainWindow>();

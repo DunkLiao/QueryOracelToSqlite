@@ -93,6 +93,17 @@
 
                     <GroupBox Header="SQLite output">
                         <StackPanel>
+                            <TextBlock Text="SQL folder" />
+                            <DockPanel Margin="0,4,0,10">
+                                <Button Content="Browse"
+                                        Command="{Binding BrowseSqlFolderCommand}"
+                                        DockPanel.Dock="Right"
+                                        Margin="8,0,0,0" />
+                                <TextBox Text="{Binding SqlFolderPath, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0"
+                                         MinHeight="34" />
+                            </DockPanel>
+
                             <TextBlock Text="Output file" />
                             <DockPanel Margin="0,4,0,10">
                                 <Button Content="Browse"

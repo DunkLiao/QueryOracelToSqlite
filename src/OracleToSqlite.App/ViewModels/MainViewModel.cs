@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.IO;
 using OracleToSqlite.App.Services;
 using OracleToSqlite.Core.Models;
 using OracleToSqlite.Core.Services;
@@ -7,7 +8,7 @@ using OracleToSqlite.Core.Services;
 namespace OracleToSqlite.App.ViewModels;
 
 public partial class MainViewModel(
-    IExportJobRunner exportJobRunner,
+    IBatchExportJobRunner batchExportJobRunner,
     IOracleQueryService oracleQueryService,
     IFileDialogService fileDialogService) : ObservableObject
 {
@@ -44,6 +45,10 @@ public partial class MainViewModel(
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RunExportCommand))]
+    private string sqlFolderPath = string.Empty;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RunExportCommand))]
     private string sqliteFilePath = string.Empty;
 
     [ObservableProperty]
@@ -54,6 +59,7 @@ public partial class MainViewModel(
     [NotifyCanExecuteChangedFor(nameof(RunExportCommand))]
     [NotifyCanExecuteChangedFor(nameof(CancelExportCommand))]
     [NotifyCanExecuteChangedFor(nameof(BrowseOutputPathCommand))]
+    [NotifyCanExecuteChangedFor(nameof(BrowseSqlFolderCommand))]
     [NotifyCanExecuteChangedFor(nameof(ClearCommand))]
     [NotifyCanExecuteChangedFor(nameof(TestConnectionCommand))]
     private bool isRunning;
@@ -82,6 +88,16 @@ public partial class MainViewModel(
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanEdit))]
+    private void BrowseSqlFolder()
+    {
+        var selectedPath = fileDialogService.ShowSelectFolderDialog(SqlFolderPath);
+        if (!string.IsNullOrWhiteSpace(selectedPath))
+        {
+            SqlFolderPath = selectedPath;
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanRunExport))]
     private async Task RunExportAsync()
     {
@@ -102,11 +118,12 @@ public partial class MainViewModel(
         try
         {
             var progress = new Progress<ExportProgress>(OnProgressChanged);
-            var result = await exportJobRunner.RunAsync(
+            var result = await batchExportJobRunner.RunAsync(
                 CreateSettings(),
                 progress,
                 cancellationTokenSource.Token);
 
+            IsRunning = false;
             ApplyResult(result);
         }
         finally
@@ -186,6 +203,7 @@ public partial class MainViewModel(
         Username = string.Empty;
         Password = string.Empty;
         SqlQuery = string.Empty;
+        SqlFolderPath = string.Empty;
         SqliteFilePath = string.Empty;
         TargetTableName = string.Empty;
         ResetRunState();
@@ -212,19 +230,14 @@ public partial class MainViewModel(
             return connectionValidationError;
         }
 
-        if (string.IsNullOrWhiteSpace(SqlQuery))
+        if (string.IsNullOrWhiteSpace(SqlFolderPath))
         {
-            return "SQL query is required.";
+            return "SQL folder path is required.";
         }
 
         if (string.IsNullOrWhiteSpace(SqliteFilePath))
         {
             return "SQLite output path is required.";
-        }
-
-        if (string.IsNullOrWhiteSpace(TargetTableName))
-        {
-            return "Target table name is required.";
         }
 
         return null;
@@ -260,14 +273,13 @@ public partial class MainViewModel(
         return null;
     }
 
-    private ExportJobSettings CreateSettings()
+    private BatchExportJobSettings CreateSettings()
     {
-        return new ExportJobSettings
+        return new BatchExportJobSettings
         {
             Connection = CreateConnectionSettings(),
-            SqlQuery = SqlQuery.Trim(),
-            SqliteFilePath = SqliteFilePath.Trim(),
-            TargetTableName = TargetTableName.Trim()
+            SqlFolderPath = SqlFolderPath.Trim(),
+            SqliteFilePath = SqliteFilePath.Trim()
         };
     }
 
@@ -294,29 +306,49 @@ public partial class MainViewModel(
         RowsWritten = progress.RowsWritten;
     }
 
-    private void ApplyResult(ExportResult result)
+    private void ApplyResult(BatchExportResult result)
     {
-        RowsWritten = result.RowCount;
+        RowsWritten = result.TotalRows;
         OutputPath = result.OutputPath;
 
         if (result.Status == ExportStatus.Succeeded)
         {
-            StatusMessage = result.RowCount == 0
+            StatusMessage = result.TotalRows == 0
                 ? "Export completed with 0 rows."
                 : "Export completed.";
             ErrorMessage = null;
             return;
         }
 
+        if (result.Status == ExportStatus.Failed && result.SucceededCount > 0)
+        {
+            StatusMessage = "Export completed with errors.";
+            ErrorMessage = FormatBatchErrors(result);
+            return;
+        }
+
         if (result.Status == ExportStatus.Cancelled)
         {
             StatusMessage = "Export cancelled.";
-            ErrorMessage = result.Error?.Message;
+            ErrorMessage = FormatBatchErrors(result);
             return;
         }
 
         StatusMessage = "Export failed.";
-        ErrorMessage = FormatError(result.Error);
+        ErrorMessage = FormatBatchErrors(result);
+    }
+
+    private static string FormatBatchErrors(BatchExportResult result)
+    {
+        var failedItems = result.Items
+            .Where(item => item.Status == ExportStatus.Failed && item.Error is not null)
+            .Select(item => $"{Path.GetFileName(item.SqlFilePath)}: {FormatError(item.Error)}")
+            .ToArray();
+
+        var summary = $"Succeeded: {result.SucceededCount}{Environment.NewLine}Failed: {result.FailedCount}";
+        return failedItems.Length == 0
+            ? summary
+            : $"{summary}{Environment.NewLine}{string.Join(Environment.NewLine, failedItems)}";
     }
 
     private static string? FormatError(ExportError? error)
