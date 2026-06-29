@@ -18,6 +18,7 @@ public partial class App : Application
         services.AddSingleton<IExportJobRunner, ExportJobRunner>();
         services.AddSingleton<IBatchExportJobRunner, BatchExportJobRunner>();
         services.AddSingleton<IFileDialogService, WindowsFileDialogService>();
+        services.AddSingleton<IConnectionSettingsStore, WindowsConnectionSettingsStore>();
         services.AddTransient<MainViewModel>();
         services.AddTransient<MainWindow>();
 

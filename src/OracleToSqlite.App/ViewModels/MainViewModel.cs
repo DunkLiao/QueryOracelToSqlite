@@ -7,12 +7,28 @@ using OracleToSqlite.Core.Services;
 
 namespace OracleToSqlite.App.ViewModels;
 
-public partial class MainViewModel(
-    IBatchExportJobRunner batchExportJobRunner,
-    IOracleQueryService oracleQueryService,
-    IFileDialogService fileDialogService) : ObservableObject
+public partial class MainViewModel : ObservableObject
 {
+    private readonly IBatchExportJobRunner batchExportJobRunner;
+    private readonly IOracleQueryService oracleQueryService;
+    private readonly IFileDialogService fileDialogService;
+    private readonly IConnectionSettingsStore connectionSettingsStore;
+
     public string Title { get; } = "Oracle To SQLite";
+
+    public MainViewModel(
+        IBatchExportJobRunner batchExportJobRunner,
+        IOracleQueryService oracleQueryService,
+        IFileDialogService fileDialogService,
+        IConnectionSettingsStore connectionSettingsStore)
+    {
+        this.batchExportJobRunner = batchExportJobRunner;
+        this.oracleQueryService = oracleQueryService;
+        this.fileDialogService = fileDialogService;
+        this.connectionSettingsStore = connectionSettingsStore;
+
+        LoadSavedConnectionSettings();
+    }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RunExportCommand))]
@@ -41,10 +57,6 @@ public partial class MainViewModel(
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RunExportCommand))]
-    private string sqlQuery = string.Empty;
-
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(RunExportCommand))]
     private string sqlFolderPath = string.Empty;
 
     [ObservableProperty]
@@ -53,7 +65,7 @@ public partial class MainViewModel(
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RunExportCommand))]
-    private string targetTableName = string.Empty;
+    private string sqlParameters = string.Empty;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RunExportCommand))]
@@ -114,6 +126,7 @@ public partial class MainViewModel(
         IsRunning = true;
         StatusMessage = "Export running.";
         cancellationTokenSource = new CancellationTokenSource();
+        SaveConnectionSettings();
 
         try
         {
@@ -164,6 +177,7 @@ public partial class MainViewModel(
 
             StatusMessage = "Oracle connection succeeded.";
             ErrorMessage = null;
+            SaveConnectionSettings();
         }
         catch (OracleQueryException exception)
         {
@@ -202,10 +216,10 @@ public partial class MainViewModel(
         ServiceName = string.Empty;
         Username = string.Empty;
         Password = string.Empty;
-        SqlQuery = string.Empty;
         SqlFolderPath = string.Empty;
         SqliteFilePath = string.Empty;
-        TargetTableName = string.Empty;
+        SqlParameters = string.Empty;
+        connectionSettingsStore.Clear();
         ResetRunState();
         StatusMessage = "Ready.";
     }
@@ -238,6 +252,15 @@ public partial class MainViewModel(
         if (string.IsNullOrWhiteSpace(SqliteFilePath))
         {
             return "SQLite output path is required.";
+        }
+
+        try
+        {
+            _ = SqlQueryPreprocessor.ParseParameterText(SqlParameters);
+        }
+        catch (ArgumentException exception)
+        {
+            return exception.Message;
         }
 
         return null;
@@ -279,8 +302,34 @@ public partial class MainViewModel(
         {
             Connection = CreateConnectionSettings(),
             SqlFolderPath = SqlFolderPath.Trim(),
-            SqliteFilePath = SqliteFilePath.Trim()
+            SqliteFilePath = SqliteFilePath.Trim(),
+            Parameters = SqlQueryPreprocessor.ParseParameterText(SqlParameters)
         };
+    }
+
+    private void LoadSavedConnectionSettings()
+    {
+        var savedSettings = connectionSettingsStore.Load();
+        if (savedSettings is null)
+        {
+            return;
+        }
+
+        Host = savedSettings.Host;
+        Port = string.IsNullOrWhiteSpace(savedSettings.Port) ? "1521" : savedSettings.Port;
+        ServiceName = savedSettings.ServiceName;
+        Username = savedSettings.Username;
+        Password = savedSettings.Password;
+    }
+
+    private void SaveConnectionSettings()
+    {
+        connectionSettingsStore.Save(new StoredConnectionSettings(
+            Host.Trim(),
+            Port.Trim(),
+            ServiceName.Trim(),
+            Username.Trim(),
+            Password));
     }
 
     private OracleConnectionSettings CreateConnectionSettings()

@@ -6,6 +6,18 @@
 # dotenv files
 .env
 
+# Project-local runtime data and private workspace files
+.agents/
+.codex/
+[Ee]rr/
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+connection-settings.json
+**/connection-settings.json
+
 # User-specific files
 *.rsuser
 *.suo

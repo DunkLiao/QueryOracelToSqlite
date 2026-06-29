@@ -66,6 +66,48 @@ public class ExportJobRunnerTests
     }
 
     [Fact]
+    public async Task RunAsync_ShouldPrepareSqlParametersBeforeExecutingOracleQuery()
+    {
+        var settings = CreateSettings(
+            CreateTempDatabasePath(),
+            "select * from customers where ss_seq = &THIS_MONTH_SS_SEQ;",
+            new Dictionary<string, string> { ["THIS_MONTH_SS_SEQ"] = "202405" });
+        var oracle = new FakeOracleQueryService(CreateEmptyResult());
+        var runner = new ExportJobRunner(
+            oracle,
+            new SqliteExportService());
+
+        await runner.RunAsync(settings);
+
+        oracle.ExecutedSqlQuery.Should().Be("select * from customers where ss_seq = :THIS_MONTH_SS_SEQ");
+        oracle.ExecutedParameters.Should().BeEquivalentTo(new Dictionary<string, string>
+        {
+            ["THIS_MONTH_SS_SEQ"] = "202405"
+        });
+    }
+
+    [Fact]
+    public async Task RunAsync_ShouldReturnValidationError_WhenSqlParameterValueIsMissing()
+    {
+        var settings = CreateSettings(
+            CreateTempDatabasePath(),
+            "select * from customers where ss_seq = :THIS_MONTH_SS_SEQ");
+        var oracle = new FakeOracleQueryService(CreateEmptyResult());
+        var runner = new ExportJobRunner(
+            oracle,
+            new SqliteExportService());
+
+        var result = await runner.RunAsync(settings);
+
+        result.Status.Should().Be(ExportStatus.Failed);
+        result.Error.Should().NotBeNull();
+        result.Error!.Code.Should().Be(ExportErrorCodes.ValidationFailed);
+        result.Error.Message.Should().Contain("THIS_MONTH_SS_SEQ");
+        oracle.ExecutedSqlQuery.Should().BeNull();
+    }
+
+
+    [Fact]
     public async Task RunAsync_ShouldReturnValidationError_WhenHostModeConnectionIsIncomplete()
     {
         var settings = new ExportJobSettings
@@ -131,7 +173,8 @@ public class ExportJobRunnerTests
 
     private static ExportJobSettings CreateSettings(
         string databasePath,
-        string sqlQuery = "select id, name from customers")
+        string sqlQuery = "select id, name from customers",
+        IReadOnlyDictionary<string, string>? parameters = null)
     {
         return new ExportJobSettings
         {
@@ -144,7 +187,8 @@ public class ExportJobRunnerTests
             },
             SqlQuery = sqlQuery,
             SqliteFilePath = databasePath,
-            TargetTableName = "Customers"
+            TargetTableName = "Customers",
+            Parameters = parameters ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         };
     }
 
@@ -170,6 +214,10 @@ public class ExportJobRunnerTests
         OracleQueryResult result,
         Exception? exception = null) : IOracleQueryService
     {
+        public string? ExecutedSqlQuery { get; private set; }
+
+        public IReadOnlyDictionary<string, string>? ExecutedParameters { get; private set; }
+
         public Task TestConnectionAsync(
             OracleConnectionSettings settings,
             CancellationToken cancellationToken = default)
@@ -180,6 +228,7 @@ public class ExportJobRunnerTests
         public Task<IReadOnlyList<OracleColumnSchema>> GetSchemaAsync(
             OracleConnectionSettings settings,
             string sqlQuery,
+            IReadOnlyDictionary<string, string>? parameters = null,
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(result.Columns);
@@ -188,8 +237,12 @@ public class ExportJobRunnerTests
         public Task<OracleQueryResult> ExecuteQueryAsync(
             OracleConnectionSettings settings,
             string sqlQuery,
+            IReadOnlyDictionary<string, string>? parameters = null,
             CancellationToken cancellationToken = default)
         {
+            ExecutedSqlQuery = sqlQuery;
+            ExecutedParameters = parameters;
+
             if (exception is not null)
             {
                 throw exception;

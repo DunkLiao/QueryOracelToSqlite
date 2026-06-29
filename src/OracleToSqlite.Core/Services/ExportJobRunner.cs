@@ -21,9 +21,15 @@ public sealed class ExportJobRunner(
             Validate(settings);
 
             progress?.Report(new ExportProgress(ExportStatus.Running, 0, "Executing Oracle query."));
+            var preparedQuery = SqlQueryPreprocessor.Prepare(settings.SqlQuery, settings.Parameters);
+            var preparedParameters = preparedQuery.Parameters.ToDictionary(
+                parameter => parameter.Name,
+                parameter => parameter.Value,
+                StringComparer.OrdinalIgnoreCase);
             var queryResult = await oracleQueryService.ExecuteQueryAsync(
                 settings.Connection,
-                settings.SqlQuery,
+                preparedQuery.SqlQuery,
+                preparedParameters,
                 cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();

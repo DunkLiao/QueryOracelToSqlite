@@ -114,9 +114,6 @@
                                          Margin="0"
                                          MinHeight="34" />
                             </DockPanel>
-
-                            <TextBlock Text="Target table name" />
-                            <TextBox Text="{Binding TargetTableName, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
                     </GroupBox>
                 </StackPanel>
@@ -124,17 +121,18 @@
 
             <Grid Grid.Column="2">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <GroupBox Grid.Row="0" Header="SQL query">
-                    <TextBox Text="{Binding SqlQuery, UpdateSourceTrigger=PropertyChanged}"
+                <GroupBox Grid.Row="0" Header="SQL parameters">
+                    <TextBox Text="{Binding SqlParameters, UpdateSourceTrigger=PropertyChanged}"
                              IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBooleanConverter}}"
                              AcceptsReturn="True"
                              AcceptsTab="True"
                              FontFamily="Consolas"
-                             FontSize="14"
+                             FontSize="13"
+                             Height="96"
                              HorizontalScrollBarVisibility="Auto"
                              VerticalScrollBarVisibility="Auto"
                              TextWrapping="NoWrap"
@@ -193,9 +191,5 @@
             </Grid>
         </Grid>
 
-        <TextBlock Grid.Row="2"
-                   Text="第一版不儲存密碼；匯出時會覆蓋重建目標資料表。"
-                   Foreground="#667085"
-                   Margin="0,10,0,0" />
     </Grid>
 </Window>

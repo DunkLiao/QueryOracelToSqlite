@@ -24,6 +24,7 @@ public sealed class OracleQueryService : IOracleQueryService
     public async Task<IReadOnlyList<OracleColumnSchema>> GetSchemaAsync(
         OracleConnectionSettings settings,
         string sqlQuery,
+        IReadOnlyDictionary<string, string>? parameters = null,
         CancellationToken cancellationToken = default)
     {
         ValidateSql(sqlQuery);
@@ -34,8 +35,10 @@ public sealed class OracleQueryService : IOracleQueryService
             await connection.OpenAsync(cancellationToken);
 
             await using var command = connection.CreateCommand();
-            command.CommandText = sqlQuery;
+            var preparedQuery = SqlQueryPreprocessor.Prepare(sqlQuery, parameters);
+            command.CommandText = preparedQuery.SqlQuery;
             command.CommandType = CommandType.Text;
+            ApplyParameters(command, preparedQuery.Parameters);
 
             await using var reader = await command.ExecuteReaderAsync(
                 CommandBehavior.SchemaOnly,
@@ -52,6 +55,7 @@ public sealed class OracleQueryService : IOracleQueryService
     public async Task<OracleQueryResult> ExecuteQueryAsync(
         OracleConnectionSettings settings,
         string sqlQuery,
+        IReadOnlyDictionary<string, string>? parameters = null,
         CancellationToken cancellationToken = default)
     {
         ValidateSql(sqlQuery);
@@ -62,8 +66,10 @@ public sealed class OracleQueryService : IOracleQueryService
             await connection.OpenAsync(cancellationToken);
 
             await using var command = connection.CreateCommand();
-            command.CommandText = sqlQuery;
+            var preparedQuery = SqlQueryPreprocessor.Prepare(sqlQuery, parameters);
+            command.CommandText = preparedQuery.SqlQuery;
             command.CommandType = CommandType.Text;
+            ApplyParameters(command, preparedQuery.Parameters);
 
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
             var columns = OracleColumnSchemaReader.FromSchemaTable(reader.GetSchemaTable());
@@ -93,6 +99,16 @@ public sealed class OracleQueryService : IOracleQueryService
     private static OracleConnection CreateConnection(OracleConnectionSettings settings)
     {
         return new OracleConnection(OracleConnectionStringFactory.Create(settings));
+    }
+
+    private static void ApplyParameters(OracleCommand command, IReadOnlyList<QueryParameter> parameters)
+    {
+        command.BindByName = true;
+
+        foreach (var parameter in parameters)
+        {
+            command.Parameters.Add(new OracleParameter(parameter.Name, parameter.Value));
+        }
     }
 
     private static void ValidateSql(string sqlQuery)

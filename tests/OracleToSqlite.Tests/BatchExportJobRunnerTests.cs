@@ -67,6 +67,27 @@ public class BatchExportJobRunnerTests
     }
 
     [Fact]
+    public async Task RunAsync_ShouldPassParametersToEachSqlFile()
+    {
+        var folderPath = CreateTempFolder();
+        var databasePath = CreateTempDatabasePath();
+        await File.WriteAllTextAsync(Path.Combine(folderPath, "Customers.sql"), "select * from customers where ss_seq = :THIS_MONTH_SS_SEQ");
+        await File.WriteAllTextAsync(Path.Combine(folderPath, "Orders.sql"), "select * from orders where ss_seq = &THIS_MONTH_SS_SEQ");
+        var singleRunner = new FakeExportJobRunner();
+        var runner = new BatchExportJobRunner(singleRunner);
+
+        var result = await runner.RunAsync(CreateSettings(
+            folderPath,
+            databasePath,
+            new Dictionary<string, string> { ["THIS_MONTH_SS_SEQ"] = "202405" }));
+
+        result.Status.Should().Be(ExportStatus.Succeeded);
+        singleRunner.Settings.Should().HaveCount(2);
+        singleRunner.Settings.Should().OnlyContain(settings =>
+            settings.Parameters["THIS_MONTH_SS_SEQ"] == "202405");
+    }
+
+    [Fact]
     public async Task RunAsync_ShouldReportCumulativeRowsAcrossSqlFiles()
     {
         var folderPath = CreateTempFolder();
@@ -102,7 +123,10 @@ public class BatchExportJobRunnerTests
         result.Items.Single().Error!.Message.Should().Contain("SQL folder");
     }
 
-    private static BatchExportJobSettings CreateSettings(string folderPath, string databasePath)
+    private static BatchExportJobSettings CreateSettings(
+        string folderPath,
+        string databasePath,
+        IReadOnlyDictionary<string, string>? parameters = null)
     {
         return new BatchExportJobSettings
         {
@@ -114,7 +138,8 @@ public class BatchExportJobRunnerTests
                 Password = "password"
             },
             SqlFolderPath = folderPath,
-            SqliteFilePath = databasePath
+            SqliteFilePath = databasePath,
+            Parameters = parameters ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         };
     }
 

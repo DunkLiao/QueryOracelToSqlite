@@ -14,7 +14,8 @@ public class MainViewModelTests
         var viewModel = new MainViewModel(
             new FakeBatchExportJobRunner(),
             new FakeOracleQueryService(),
-            new FakeFileDialogService());
+            new FakeFileDialogService(),
+            new FakeConnectionSettingsStore());
 
         viewModel.Title.Should().Be("Oracle To SQLite");
         viewModel.Port.Should().Be("1521");
@@ -28,10 +29,17 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public void MainViewModel_ShouldNotExposeObsoleteSingleSqlFields()
+    {
+        typeof(MainViewModel).GetProperty("SqlQuery").Should().BeNull();
+        typeof(MainViewModel).GetProperty("TargetTableName").Should().BeNull();
+    }
+
+    [Fact]
     public void BrowseOutputPathCommand_ShouldUseDialogResult()
     {
         var dialog = new FakeFileDialogService { Result = @"C:\exports\report.db" };
-        var viewModel = new MainViewModel(new FakeBatchExportJobRunner(), new FakeOracleQueryService(), dialog)
+        var viewModel = new MainViewModel(new FakeBatchExportJobRunner(), new FakeOracleQueryService(), dialog, new FakeConnectionSettingsStore())
         {
             SqliteFilePath = @"C:\exports\old.db"
         };
@@ -46,7 +54,7 @@ public class MainViewModelTests
     public void BrowseSqlFolderCommand_ShouldUseDialogResult()
     {
         var dialog = new FakeFileDialogService { FolderResult = @"C:\exports\sql" };
-        var viewModel = new MainViewModel(new FakeBatchExportJobRunner(), new FakeOracleQueryService(), dialog)
+        var viewModel = new MainViewModel(new FakeBatchExportJobRunner(), new FakeOracleQueryService(), dialog, new FakeConnectionSettingsStore())
         {
             SqlFolderPath = @"C:\exports\old-sql"
         };
@@ -60,7 +68,8 @@ public class MainViewModelTests
     [Fact]
     public void ClearCommand_ShouldResetEditableFieldsAndStatus()
     {
-        var viewModel = CreateValidViewModel();
+        var store = new FakeConnectionSettingsStore();
+        var viewModel = CreateValidViewModel(settingsStore: store);
         viewModel.StatusMessage = "Export completed.";
         viewModel.ErrorMessage = "Previous error";
         viewModel.RowsWritten = 12;
@@ -73,21 +82,47 @@ public class MainViewModelTests
         viewModel.ServiceName.Should().BeEmpty();
         viewModel.Username.Should().BeEmpty();
         viewModel.Password.Should().BeEmpty();
-        viewModel.SqlQuery.Should().BeEmpty();
         viewModel.SqlFolderPath.Should().BeEmpty();
         viewModel.SqliteFilePath.Should().BeEmpty();
-        viewModel.TargetTableName.Should().BeEmpty();
+        viewModel.SqlParameters.Should().BeEmpty();
         viewModel.RowsWritten.Should().Be(0);
         viewModel.OutputPath.Should().BeNull();
         viewModel.ErrorMessage.Should().BeNull();
         viewModel.StatusMessage.Should().Be("Ready.");
+        store.WasCleared.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Constructor_ShouldLoadSavedConnectionSettings()
+    {
+        var store = new FakeConnectionSettingsStore
+        {
+            SavedSettings = new StoredConnectionSettings(
+                "db.example.local",
+                "1522",
+                "ORCLPDB1",
+                "report_user",
+                "secret")
+        };
+
+        var viewModel = new MainViewModel(
+            new FakeBatchExportJobRunner(),
+            new FakeOracleQueryService(),
+            new FakeFileDialogService(),
+            store);
+
+        viewModel.Host.Should().Be("db.example.local");
+        viewModel.Port.Should().Be("1522");
+        viewModel.ServiceName.Should().Be("ORCLPDB1");
+        viewModel.Username.Should().Be("report_user");
+        viewModel.Password.Should().Be("secret");
     }
 
     [Fact]
     public async Task RunExportCommand_ShouldShowValidationError_WhenRequiredFieldsAreBlank()
     {
         var runner = new FakeBatchExportJobRunner();
-        var viewModel = new MainViewModel(runner, new FakeOracleQueryService(), new FakeFileDialogService());
+        var viewModel = new MainViewModel(runner, new FakeOracleQueryService(), new FakeFileDialogService(), new FakeConnectionSettingsStore());
 
         await viewModel.RunExportCommand.ExecuteAsync(null);
 
@@ -101,7 +136,8 @@ public class MainViewModelTests
     public async Task TestConnectionCommand_ShouldPassConnectionSettingsAndShowSuccess()
     {
         var oracle = new FakeOracleQueryService();
-        var viewModel = CreateValidViewModel(oracleQueryService: oracle);
+        var store = new FakeConnectionSettingsStore();
+        var viewModel = CreateValidViewModel(oracleQueryService: oracle, settingsStore: store);
 
         await viewModel.TestConnectionCommand.ExecuteAsync(null);
 
@@ -114,6 +150,12 @@ public class MainViewModelTests
         viewModel.StatusMessage.Should().Be("Oracle connection succeeded.");
         viewModel.ErrorMessage.Should().BeNull();
         viewModel.IsRunning.Should().BeFalse();
+        store.SavedSettings.Should().Be(new StoredConnectionSettings(
+            "db.example.local",
+            "1521",
+            "ORCLPDB1",
+            "report_user",
+            "secret"));
     }
 
     [Fact]
@@ -123,7 +165,8 @@ public class MainViewModelTests
         var viewModel = new MainViewModel(
             new FakeBatchExportJobRunner(),
             oracle,
-            new FakeFileDialogService())
+            new FakeFileDialogService(),
+            new FakeConnectionSettingsStore())
         {
             Host = "db.example.local",
             Port = "1521",
@@ -146,7 +189,8 @@ public class MainViewModelTests
         var viewModel = new MainViewModel(
             new FakeBatchExportJobRunner(),
             oracle,
-            new FakeFileDialogService());
+            new FakeFileDialogService(),
+            new FakeConnectionSettingsStore());
 
         await viewModel.TestConnectionCommand.ExecuteAsync(null);
 
@@ -185,7 +229,8 @@ public class MainViewModelTests
         {
             Result = CreateBatchSuccess(2, 12, @"C:\exports\report.db")
         };
-        var viewModel = CreateValidViewModel(runner);
+        var store = new FakeConnectionSettingsStore();
+        var viewModel = CreateValidViewModel(runner, settingsStore: store);
 
         await viewModel.RunExportCommand.ExecuteAsync(null);
 
@@ -202,6 +247,50 @@ public class MainViewModelTests
         viewModel.OutputPath.Should().Be(@"C:\exports\report.db");
         viewModel.ErrorMessage.Should().BeNull();
         viewModel.IsRunning.Should().BeFalse();
+        store.SavedSettings.Should().Be(new StoredConnectionSettings(
+            "db.example.local",
+            "1521",
+            "ORCLPDB1",
+            "report_user",
+            "secret"));
+    }
+
+    [Fact]
+    public async Task RunExportCommand_ShouldParseSqlParametersIntoBatchSettings()
+    {
+        var runner = new FakeBatchExportJobRunner
+        {
+            Result = CreateBatchSuccess(1, 3, @"C:\exports\report.db")
+        };
+        var viewModel = CreateValidViewModel(runner);
+        viewModel.SqlParameters = """
+            :THIS_MONTH_SS_SEQ = 202405
+            REPORT_CODE=CR6010
+            """;
+
+        await viewModel.RunExportCommand.ExecuteAsync(null);
+
+        runner.Settings.Should().NotBeNull();
+        runner.Settings!.Parameters.Should().BeEquivalentTo(new Dictionary<string, string>
+        {
+            ["THIS_MONTH_SS_SEQ"] = "202405",
+            ["REPORT_CODE"] = "CR6010"
+        });
+        viewModel.StatusMessage.Should().Be("Export completed.");
+    }
+
+    [Fact]
+    public async Task RunExportCommand_ShouldShowValidationError_WhenSqlParametersAreInvalid()
+    {
+        var runner = new FakeBatchExportJobRunner();
+        var viewModel = CreateValidViewModel(runner);
+        viewModel.SqlParameters = "THIS_MONTH_SS_SEQ";
+
+        await viewModel.RunExportCommand.ExecuteAsync(null);
+
+        runner.Settings.Should().BeNull();
+        viewModel.StatusMessage.Should().Be("Validation failed.");
+        viewModel.ErrorMessage.Should().Contain("name=value");
     }
 
     [Fact]
@@ -286,22 +375,23 @@ public class MainViewModelTests
 
     private static MainViewModel CreateValidViewModel(
         FakeBatchExportJobRunner? runner = null,
-        FakeOracleQueryService? oracleQueryService = null)
+        FakeOracleQueryService? oracleQueryService = null,
+        FakeConnectionSettingsStore? settingsStore = null)
     {
         return new MainViewModel(
             runner ?? new FakeBatchExportJobRunner(),
             oracleQueryService ?? new FakeOracleQueryService(),
-            new FakeFileDialogService())
+            new FakeFileDialogService(),
+            settingsStore ?? new FakeConnectionSettingsStore())
         {
             Host = "db.example.local",
             Port = "1521",
             ServiceName = "ORCLPDB1",
             Username = "report_user",
             Password = "secret",
-            SqlQuery = "select * from customers",
             SqlFolderPath = @"C:\exports\sql",
             SqliteFilePath = @"C:\exports\report.db",
-            TargetTableName = "Customers"
+            SqlParameters = string.Empty
         };
     }
 
@@ -354,6 +444,30 @@ public class MainViewModelTests
         {
             CurrentFolderPath = currentPath;
             return FolderResult;
+        }
+    }
+
+    private sealed class FakeConnectionSettingsStore : IConnectionSettingsStore
+    {
+        public StoredConnectionSettings? SavedSettings { get; set; }
+
+        public bool WasCleared { get; private set; }
+
+        public StoredConnectionSettings? Load()
+        {
+            return SavedSettings;
+        }
+
+        public void Save(StoredConnectionSettings settings)
+        {
+            SavedSettings = settings;
+            WasCleared = false;
+        }
+
+        public void Clear()
+        {
+            SavedSettings = null;
+            WasCleared = true;
         }
     }
 
@@ -426,6 +540,7 @@ public class MainViewModelTests
         public Task<IReadOnlyList<OracleColumnSchema>> GetSchemaAsync(
             OracleConnectionSettings settings,
             string sqlQuery,
+            IReadOnlyDictionary<string, string>? parameters = null,
             CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
@@ -434,6 +549,7 @@ public class MainViewModelTests
         public Task<OracleQueryResult> ExecuteQueryAsync(
             OracleConnectionSettings settings,
             string sqlQuery,
+            IReadOnlyDictionary<string, string>? parameters = null,
             CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();

@@ -66,6 +66,7 @@ public sealed class BatchExportJobRunner(IExportJobRunner exportJobRunner) : IBa
                     SqlQuery = sqlQuery.Trim(),
                     SqliteFilePath = settings.SqliteFilePath.Trim(),
                     TargetTableName = targetTableName,
+                    Parameters = settings.Parameters,
                     OverwriteExisting = settings.OverwriteExisting
                 };
 

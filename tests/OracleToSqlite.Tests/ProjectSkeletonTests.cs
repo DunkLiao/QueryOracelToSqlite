@@ -21,7 +21,8 @@ public class ProjectSkeletonTests
         var viewModel = new MainViewModel(
             new FakeBatchExportJobRunner(),
             new FakeOracleQueryService(),
-            new FakeFileDialogService());
+            new FakeFileDialogService(),
+            new FakeConnectionSettingsStore());
 
         viewModel.Title.Should().Be("Oracle To SQLite");
     }
@@ -70,6 +71,7 @@ public class ProjectSkeletonTests
         public Task<IReadOnlyList<OracleColumnSchema>> GetSchemaAsync(
             OracleConnectionSettings settings,
             string sqlQuery,
+            IReadOnlyDictionary<string, string>? parameters = null,
             CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
@@ -78,9 +80,26 @@ public class ProjectSkeletonTests
         public Task<OracleQueryResult> ExecuteQueryAsync(
             OracleConnectionSettings settings,
             string sqlQuery,
+            IReadOnlyDictionary<string, string>? parameters = null,
             CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
+        }
+    }
+
+    private sealed class FakeConnectionSettingsStore : IConnectionSettingsStore
+    {
+        public StoredConnectionSettings? Load()
+        {
+            return null;
+        }
+
+        public void Save(StoredConnectionSettings settings)
+        {
+        }
+
+        public void Clear()
+        {
         }
     }
 }

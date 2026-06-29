@@ -11,10 +11,12 @@ public interface IOracleQueryService
     Task<IReadOnlyList<OracleColumnSchema>> GetSchemaAsync(
         OracleConnectionSettings settings,
         string sqlQuery,
+        IReadOnlyDictionary<string, string>? parameters = null,
         CancellationToken cancellationToken = default);
 
     Task<OracleQueryResult> ExecuteQueryAsync(
         OracleConnectionSettings settings,
         string sqlQuery,
+        IReadOnlyDictionary<string, string>? parameters = null,
         CancellationToken cancellationToken = default);
 }
