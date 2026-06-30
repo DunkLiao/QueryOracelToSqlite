@@ -23,6 +23,7 @@ public class MainViewModelTests
         viewModel.StatusMessage.Should().Be("Ready.");
         viewModel.RowsWritten.Should().Be(0);
         viewModel.ErrorMessage.Should().BeNull();
+        viewModel.RunLog.Should().BeEmpty();
         viewModel.RunExportCommand.CanExecute(null).Should().BeTrue();
         viewModel.TestConnectionCommand.CanExecute(null).Should().BeTrue();
         viewModel.CancelExportCommand.CanExecute(null).Should().BeFalse();
@@ -72,6 +73,7 @@ public class MainViewModelTests
         var viewModel = CreateValidViewModel(settingsStore: store);
         viewModel.StatusMessage = "Export completed.";
         viewModel.ErrorMessage = "Previous error";
+        viewModel.RunLog = "Previous log";
         viewModel.RowsWritten = 12;
         viewModel.OutputPath = @"C:\exports\report.db";
 
@@ -88,6 +90,7 @@ public class MainViewModelTests
         viewModel.RowsWritten.Should().Be(0);
         viewModel.OutputPath.Should().BeNull();
         viewModel.ErrorMessage.Should().BeNull();
+        viewModel.RunLog.Should().BeEmpty();
         viewModel.StatusMessage.Should().Be("Ready.");
         store.WasCleared.Should().BeTrue();
     }
@@ -291,6 +294,30 @@ public class MainViewModelTests
         runner.Settings.Should().BeNull();
         viewModel.StatusMessage.Should().Be("Validation failed.");
         viewModel.ErrorMessage.Should().Contain("name=value");
+        viewModel.RunLog.Should().Contain("name=value");
+    }
+
+    [Fact]
+    public async Task RunExportCommand_ShouldAppendProgressMessagesToRunLog()
+    {
+        var runner = new FakeBatchExportJobRunner
+        {
+            ProgressMessages =
+            [
+                "Reading Customers.sql as UTF-8.",
+                "Executing Oracle query.",
+                "Exporting rows to SQLite."
+            ],
+            Result = CreateBatchSuccess(1, 3, @"C:\exports\report.db")
+        };
+        var viewModel = CreateValidViewModel(runner);
+
+        await viewModel.RunExportCommand.ExecuteAsync(null);
+
+        viewModel.RunLog.Should().Contain("Reading Customers.sql as UTF-8.");
+        viewModel.RunLog.Should().Contain("Executing Oracle query.");
+        viewModel.RunLog.Should().Contain("Exporting rows to SQLite.");
+        viewModel.RunLog.Should().Contain("Export completed.");
     }
 
     [Fact]
@@ -328,6 +355,8 @@ public class MainViewModelTests
         viewModel.ErrorMessage.Should().Contain("Succeeded: 2");
         viewModel.ErrorMessage.Should().Contain("Failed: 1");
         viewModel.ErrorMessage.Should().Contain("Broken.sql");
+        viewModel.RunLog.Should().Contain("Succeeded: 2");
+        viewModel.RunLog.Should().Contain("Broken.sql");
     }
 
     [Fact]
@@ -347,6 +376,7 @@ public class MainViewModelTests
         viewModel.StatusMessage.Should().Be("Export failed.");
         viewModel.ErrorMessage.Should().Contain("VALIDATION_FAILED");
         viewModel.ErrorMessage.Should().Contain("SQL folder");
+        viewModel.RunLog.Should().Contain("SQL folder");
         viewModel.IsRunning.Should().BeFalse();
     }
 
@@ -483,13 +513,25 @@ public class MainViewModelTests
 
         public bool ObservedCancellation { get; private set; }
 
+        public IReadOnlyList<string> ProgressMessages { get; init; } = Array.Empty<string>();
+
         public async Task<BatchExportResult> RunAsync(
             BatchExportJobSettings settings,
             IProgress<ExportProgress>? progress = null,
             CancellationToken cancellationToken = default)
         {
             Settings = settings;
-            progress?.Report(new ExportProgress(ExportStatus.Running, 1, "Writing rows to SQLite."));
+            if (ProgressMessages.Count == 0)
+            {
+                progress?.Report(new ExportProgress(ExportStatus.Running, 1, "Writing rows to SQLite."));
+            }
+            else
+            {
+                foreach (var message in ProgressMessages)
+                {
+                    progress?.Report(new ExportProgress(ExportStatus.Running, 1, message));
+                }
+            }
             Started.TrySetResult();
 
             if (DelayUntilCancelled)

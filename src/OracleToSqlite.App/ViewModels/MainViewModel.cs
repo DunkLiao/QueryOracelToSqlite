@@ -88,6 +88,9 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string? errorMessage;
 
+    [ObservableProperty]
+    private string runLog = string.Empty;
+
     private CancellationTokenSource? cancellationTokenSource;
 
     [RelayCommand(CanExecute = nameof(CanEdit))]
@@ -120,17 +123,19 @@ public partial class MainViewModel : ObservableObject
         {
             StatusMessage = "Validation failed.";
             ErrorMessage = validationError;
+            AppendRunLog(validationError);
             return;
         }
 
         IsRunning = true;
         StatusMessage = "Export running.";
+        AppendRunLog("Export running.");
         cancellationTokenSource = new CancellationTokenSource();
         SaveConnectionSettings();
 
         try
         {
-            var progress = new Progress<ExportProgress>(OnProgressChanged);
+            var progress = new InlineProgress<ExportProgress>(OnProgressChanged);
             var result = await batchExportJobRunner.RunAsync(
                 CreateSettings(),
                 progress,
@@ -162,6 +167,7 @@ public partial class MainViewModel : ObservableObject
         {
             StatusMessage = "Validation failed.";
             ErrorMessage = validationError;
+            AppendRunLog(validationError);
             return;
         }
 
@@ -177,16 +183,19 @@ public partial class MainViewModel : ObservableObject
 
             StatusMessage = "Oracle connection succeeded.";
             ErrorMessage = null;
+            AppendRunLog("Oracle connection succeeded.");
             SaveConnectionSettings();
         }
         catch (OracleQueryException exception)
         {
             StatusMessage = "Oracle connection failed.";
             ErrorMessage = FormatError(exception.Error);
+            AppendRunLog(ErrorMessage);
         }
         catch (OperationCanceledException)
         {
             StatusMessage = "Oracle connection test cancelled.";
+            AppendRunLog(StatusMessage);
         }
         finally
         {
@@ -234,6 +243,7 @@ public partial class MainViewModel : ObservableObject
         RowsWritten = 0;
         OutputPath = null;
         ErrorMessage = null;
+        RunLog = string.Empty;
     }
 
     private string? ValidateForm()
@@ -353,6 +363,7 @@ public partial class MainViewModel : ObservableObject
 
         StatusMessage = progress.Message;
         RowsWritten = progress.RowsWritten;
+        AppendRunLog(progress.Message);
     }
 
     private void ApplyResult(BatchExportResult result)
@@ -366,6 +377,7 @@ public partial class MainViewModel : ObservableObject
                 ? "Export completed with 0 rows."
                 : "Export completed.";
             ErrorMessage = null;
+            AppendRunLog(StatusMessage);
             return;
         }
 
@@ -373,6 +385,8 @@ public partial class MainViewModel : ObservableObject
         {
             StatusMessage = "Export completed with errors.";
             ErrorMessage = FormatBatchErrors(result);
+            AppendRunLog(StatusMessage);
+            AppendRunLog(ErrorMessage);
             return;
         }
 
@@ -380,11 +394,27 @@ public partial class MainViewModel : ObservableObject
         {
             StatusMessage = "Export cancelled.";
             ErrorMessage = FormatBatchErrors(result);
+            AppendRunLog(StatusMessage);
+            AppendRunLog(ErrorMessage);
             return;
         }
 
         StatusMessage = "Export failed.";
         ErrorMessage = FormatBatchErrors(result);
+        AppendRunLog(StatusMessage);
+        AppendRunLog(ErrorMessage);
+    }
+
+    private void AppendRunLog(string? message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return;
+        }
+
+        RunLog = string.IsNullOrWhiteSpace(RunLog)
+            ? message
+            : $"{RunLog}{Environment.NewLine}{message}";
     }
 
     private static string FormatBatchErrors(BatchExportResult result)
@@ -415,5 +445,13 @@ public partial class MainViewModel : ObservableObject
     private static string? NullIfWhiteSpace(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private sealed class InlineProgress<T>(Action<T> handler) : IProgress<T>
+    {
+        public void Report(T value)
+        {
+            handler(value);
+        }
     }
 }

@@ -15,6 +15,7 @@ public partial class App : Application
         var services = new ServiceCollection();
         services.AddSingleton<IOracleQueryService, OracleQueryService>();
         services.AddSingleton<ISqliteExportService, SqliteExportService>();
+        services.AddSingleton<ISqlFileReader, SqlFileReader>();
         services.AddSingleton<IExportJobRunner, ExportJobRunner>();
         services.AddSingleton<IBatchExportJobRunner, BatchExportJobRunner>();
         services.AddSingleton<IFileDialogService, WindowsFileDialogService>();

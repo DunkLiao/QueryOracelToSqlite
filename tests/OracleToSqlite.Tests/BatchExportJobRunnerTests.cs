@@ -108,6 +108,47 @@ public class BatchExportJobRunnerTests
     }
 
     [Fact]
+    public async Task RunAsync_ShouldReportDetectedSqlFileEncoding()
+    {
+        var folderPath = CreateTempFolder();
+        var databasePath = CreateTempDatabasePath();
+        await File.WriteAllTextAsync(Path.Combine(folderPath, "Customers.sql"), "select * from customers");
+        var progressEvents = new List<ExportProgress>();
+        var runner = new BatchExportJobRunner(
+            new FakeExportJobRunner(),
+            new FakeSqlFileReader("select * from customers", "UTF-8"));
+
+        await runner.RunAsync(
+            CreateSettings(folderPath, databasePath),
+            new CollectingProgress<ExportProgress>(progressEvents));
+
+        progressEvents.Select(progress => progress.Message)
+            .Should().Contain(message => message == "Reading Customers.sql as UTF-8.");
+    }
+
+    [Fact]
+    public async Task RunAsync_ShouldReportEachSqlFileResult()
+    {
+        var folderPath = CreateTempFolder();
+        var databasePath = CreateTempDatabasePath();
+        await File.WriteAllTextAsync(Path.Combine(folderPath, "Customers.sql"), "select * from customers");
+        await File.WriteAllTextAsync(Path.Combine(folderPath, "Broken.sql"), "select * from missing_table");
+        var progressEvents = new List<ExportProgress>();
+        var runner = new BatchExportJobRunner(
+            new FakeExportJobRunner { FailTableName = "Broken" },
+            new FakeSqlFileReader("select * from customers", "UTF-8"));
+
+        await runner.RunAsync(
+            CreateSettings(folderPath, databasePath),
+            new CollectingProgress<ExportProgress>(progressEvents));
+
+        progressEvents.Select(progress => progress.Message)
+            .Should().Contain(message => message == "Completed Customers.sql: 5 rows.");
+        progressEvents.Select(progress => progress.Message)
+            .Should().Contain(message => message == "Failed Broken.sql: ORACLE_SQL_FAILED.");
+    }
+
+    [Fact]
     public async Task RunAsync_ShouldReturnValidationFailure_WhenSqlFolderDoesNotExist()
     {
         var missingFolder = Path.Combine(Path.GetTempPath(), $"oracle-to-sqlite-missing-{Guid.NewGuid():N}");
@@ -186,6 +227,16 @@ public class BatchExportJobRunnerTests
             }
 
             return Task.FromResult(ExportResult.Succeeded(5, TimeSpan.FromMilliseconds(10), settings.SqliteFilePath));
+        }
+    }
+
+    private sealed class FakeSqlFileReader(string sqlText, string encodingName) : ISqlFileReader
+    {
+        public Task<SqlFileReadResult> ReadAsync(
+            string path,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new SqlFileReadResult(sqlText, encodingName));
         }
     }
 

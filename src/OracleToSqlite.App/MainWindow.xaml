@@ -181,10 +181,18 @@
                                 BorderBrush="#D0D7DE"
                                 BorderThickness="1"
                                 Padding="10"
-                                MinHeight="72">
-                            <TextBlock Text="{Binding ErrorMessage}"
-                                       Foreground="#B42318"
-                                       TextWrapping="Wrap" />
+                                MinHeight="160">
+                            <TextBox Text="{Binding RunLog}"
+                                     IsReadOnly="True"
+                                     BorderThickness="0"
+                                     Background="Transparent"
+                                     FontFamily="Consolas"
+                                     FontSize="12"
+                                     TextWrapping="Wrap"
+                                     AcceptsReturn="True"
+                                     VerticalScrollBarVisibility="Auto"
+                                     HorizontalScrollBarVisibility="Disabled"
+                                     VerticalContentAlignment="Top" />
                         </Border>
                     </Grid>
                 </GroupBox>

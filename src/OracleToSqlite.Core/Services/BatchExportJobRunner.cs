@@ -3,8 +3,24 @@ using OracleToSqlite.Core.Models;
 
 namespace OracleToSqlite.Core.Services;
 
-public sealed class BatchExportJobRunner(IExportJobRunner exportJobRunner) : IBatchExportJobRunner
+public sealed class BatchExportJobRunner : IBatchExportJobRunner
 {
+    private readonly IExportJobRunner exportJobRunner;
+    private readonly ISqlFileReader sqlFileReader;
+
+    public BatchExportJobRunner(IExportJobRunner exportJobRunner)
+        : this(exportJobRunner, new SqlFileReader())
+    {
+    }
+
+    public BatchExportJobRunner(
+        IExportJobRunner exportJobRunner,
+        ISqlFileReader sqlFileReader)
+    {
+        this.exportJobRunner = exportJobRunner;
+        this.sqlFileReader = sqlFileReader;
+    }
+
     public async Task<BatchExportResult> RunAsync(
         BatchExportJobSettings settings,
         IProgress<ExportProgress>? progress = null,
@@ -57,13 +73,17 @@ public sealed class BatchExportJobRunner(IExportJobRunner exportJobRunner) : IBa
                 var completedRows = items
                     .Where(item => item.Status == ExportStatus.Succeeded)
                     .Sum(item => item.RowCount);
-                progress?.Report(new ExportProgress(ExportStatus.Running, completedRows, $"Exporting {Path.GetFileName(sqlFile)}."));
-
-                var sqlQuery = await File.ReadAllTextAsync(sqlFile, cancellationToken);
+                var sqlReadResult = await sqlFileReader.ReadAsync(sqlFile, cancellationToken);
+                var sqlFileName = Path.GetFileName(sqlFile);
+                progress?.Report(new ExportProgress(
+                    ExportStatus.Running,
+                    completedRows,
+                    $"Reading {sqlFileName} as {sqlReadResult.EncodingName}."));
+                progress?.Report(new ExportProgress(ExportStatus.Running, completedRows, $"Exporting {sqlFileName}."));
                 var itemSettings = new ExportJobSettings
                 {
                     Connection = settings.Connection,
-                    SqlQuery = sqlQuery.Trim(),
+                    SqlQuery = sqlReadResult.SqlText.Trim(),
                     SqliteFilePath = settings.SqliteFilePath.Trim(),
                     TargetTableName = targetTableName,
                     Parameters = settings.Parameters,
@@ -78,6 +98,7 @@ public sealed class BatchExportJobRunner(IExportJobRunner exportJobRunner) : IBa
                     result.Status,
                     result.RowCount,
                     result.Error));
+                ReportItemResult(progress, completedRows, sqlFileName, result);
 
                 if (result.Status == ExportStatus.Cancelled)
                 {
@@ -98,6 +119,33 @@ public sealed class BatchExportJobRunner(IExportJobRunner exportJobRunner) : IBa
             progress?.Report(new ExportProgress(ExportStatus.Cancelled, items.Sum(item => item.RowCount), "Batch export was cancelled."));
             return CreateResult(ExportStatus.Cancelled, items.Count, stopwatch.Elapsed, null, items);
         }
+    }
+
+    private static void ReportItemResult(
+        IProgress<ExportProgress>? progress,
+        long completedRows,
+        string sqlFileName,
+        ExportResult result)
+    {
+        if (progress is null)
+        {
+            return;
+        }
+
+        if (result.Status == ExportStatus.Succeeded)
+        {
+            progress.Report(new ExportProgress(
+                ExportStatus.Running,
+                completedRows + result.RowCount,
+                $"Completed {sqlFileName}: {result.RowCount} rows."));
+            return;
+        }
+
+        var code = result.Error?.Code ?? "UNKNOWN";
+        progress.Report(new ExportProgress(
+            ExportStatus.Running,
+            completedRows,
+            $"Failed {sqlFileName}: {code}."));
     }
 
     private static BatchExportResult FailedValidation(
