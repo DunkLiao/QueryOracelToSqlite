@@ -77,7 +77,7 @@ public sealed class SqliteExportService : ISqliteExportService
 
         var columnDefinitions = columns
             .OrderBy(column => column.Ordinal)
-            .Select(column => $"{QuoteIdentifier(column.ColumnName)} {MapToSqliteType(column)}");
+            .Select(column => $"{QuoteIdentifier(column.ColumnName)} {SqliteTypeMapper.Map(column)}");
 
         return $"CREATE TABLE {QuoteIdentifier(tableName)} ({string.Join(", ", columnDefinitions)})";
     }
@@ -120,48 +120,6 @@ public sealed class SqliteExportService : ISqliteExportService
         }
 
         return $"\"{identifier.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
-    }
-
-    private static string MapToSqliteType(OracleColumnSchema column)
-    {
-        var oracleType = column.OracleDataTypeName.Trim().ToUpperInvariant();
-
-        if (oracleType == "NUMBER")
-        {
-            if (column.Scale == 0)
-            {
-                return "INTEGER";
-            }
-
-            if (column.Scale > 0)
-            {
-                return "REAL";
-            }
-
-            return "NUMERIC";
-        }
-
-        if (oracleType is "BLOB" or "RAW" or "LONG RAW")
-        {
-            return "BLOB";
-        }
-
-        if (oracleType == "DATE" || oracleType.StartsWith("TIMESTAMP", StringComparison.Ordinal))
-        {
-            return "TEXT";
-        }
-
-        if (oracleType.Contains("CHAR", StringComparison.Ordinal) || oracleType is "CLOB" or "NCLOB" or "LONG")
-        {
-            return "TEXT";
-        }
-
-        if (oracleType is "BINARY_FLOAT" or "BINARY_DOUBLE" or "FLOAT")
-        {
-            return "REAL";
-        }
-
-        return "TEXT";
     }
 
     private static object ConvertValue(object? value)

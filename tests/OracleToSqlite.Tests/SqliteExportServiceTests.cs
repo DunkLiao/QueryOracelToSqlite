@@ -184,6 +184,55 @@ public class SqliteExportServiceTests
         createSql.Should().Contain("\"VALUE\" TEXT");
     }
 
+    [Fact]
+    public async Task ExportAsync_ShouldMapNumberWithUnknownScaleToNumeric()
+    {
+        var databasePath = CreateTempDatabasePath();
+        var settings = CreateSettings(databasePath, "NumericTypes");
+        var result = new OracleQueryResult(
+            new[]
+            {
+                new OracleColumnSchema(0, "VALUE", "NUMBER", "Decimal", 38, null, true)
+            },
+            Array.Empty<IReadOnlyDictionary<string, object?>>());
+        var service = new SqliteExportService();
+
+        await service.ExportAsync(settings, result);
+
+        var createSql = await ReadCreateTableSqlAsync(databasePath, "NumericTypes");
+        createSql.Should().Contain("\"VALUE\" NUMERIC");
+    }
+
+    [Theory]
+    [InlineData("Int16", "INTEGER")]
+    [InlineData("Int32", "INTEGER")]
+    [InlineData("Int64", "INTEGER")]
+    [InlineData("Double", "REAL")]
+    [InlineData("Single", "REAL")]
+    [InlineData("Byte[]", "BLOB")]
+    [InlineData("Decimal", "NUMERIC")]
+    [InlineData("DateTime", "TEXT")]
+    [InlineData("String", "TEXT")]
+    public async Task ExportAsync_ShouldFallbackToProviderType_WhenOracleTypeIsUnknown(
+        string providerTypeName,
+        string expectedSqliteType)
+    {
+        var databasePath = CreateTempDatabasePath();
+        var settings = CreateSettings(databasePath, "ProviderFallback");
+        var result = new OracleQueryResult(
+            new[]
+            {
+                new OracleColumnSchema(0, "VALUE", "UNKNOWN", providerTypeName, null, null, true)
+            },
+            Array.Empty<IReadOnlyDictionary<string, object?>>());
+        var service = new SqliteExportService();
+
+        await service.ExportAsync(settings, result);
+
+        var createSql = await ReadCreateTableSqlAsync(databasePath, "ProviderFallback");
+        createSql.Should().Contain($"\"VALUE\" {expectedSqliteType}");
+    }
+
     private static ExportJobSettings CreateSettings(
         string databasePath,
         string tableName,
@@ -208,5 +257,14 @@ public class SqliteExportServiceTests
     private static string CreateTempDatabasePath()
     {
         return Path.Combine(Path.GetTempPath(), $"oracle-to-sqlite-{Guid.NewGuid():N}.db");
+    }
+
+    private static async Task<string> ReadCreateTableSqlAsync(string databasePath, string tableName)
+    {
+        await using var connection = new SqliteConnection($"Data Source={databasePath}");
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = $"SELECT sql FROM sqlite_master WHERE type = 'table' AND name = '{tableName}'";
+        return (string)(await command.ExecuteScalarAsync())!;
     }
 }
